@@ -1,0 +1,19 @@
+[
+  {
+    "id": "dola-1",
+    "name": "Dola Cookie 1",
+    "enabled": true,
+    "cookie": "把这个账号的 Dola Cookie 粘到这里。三种格式都认：请求头原文 a=1; b=2，或 Cookie-Editor 导出的 JSON 数组，或 Netscape cookies.txt。",
+    "proxy": ""
+  },
+  {
+    "id": "dola-2",
+    "name": "Dola Cookie 2",
+    "enabled": true,
+    "cookie": "",
+    "proxy": "socks5://127.0.0.1:1080"
+  },
+  {
+    "_注释": "id 必须唯一，用于记录每日额度计数。enabled 设 false 可临时停用某个账号。proxy 留空为直连。"
+  }
+]

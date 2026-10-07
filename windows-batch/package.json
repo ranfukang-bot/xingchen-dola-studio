@@ -1,0 +1,17 @@
+{
+  "name": "dola-batch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "星辰Dola 批量视频生成 —— 独立自动化工具（不修改创作台本体）",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "probe": "node src/probe.js",
+    "dry": "node src/index.js --dry-run",
+    "setup": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

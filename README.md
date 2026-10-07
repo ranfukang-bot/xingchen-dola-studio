@@ -23,3 +23,18 @@ cd mac && npm install && npm start
 ```
 
 构建说明、实现对照表与已知事项见 [`mac/README.md`](mac/README.md)。
+
+## 批量生成自动化（Windows）
+
+见 [`windows-batch/`](windows-batch/)，独立运行的批量工具，**不修改创作台本体**
+（2.6 的 exe 带防篡改保护，加不进去）。
+
+把「传图 → 选视频生成 → 开 30 秒 → Seedance 2.5 → 9:16 → 粘提示词 → 发送」
+整串自动化，按文件夹队列依次生成，账号额度用完自动换下一个。
+
+```
+双击 windows-batch\校准.bat      先校准一次
+双击 windows-batch\开始批量.bat  开跑
+```
+
+用法见 [`windows-batch/README.md`](windows-batch/README.md)。

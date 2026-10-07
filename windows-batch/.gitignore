@@ -1,0 +1,18 @@
+# 账号 Cookie 等同于登录凭证，绝不入库
+accounts.json
+
+# 运行产物
+node_modules/
+state.json
+logs/
+queue-done/
+queue-failed/
+probe-report.json
+probe-*.png
+
+# 队列里的实际任务（提示词和素材是你的内容，不入库）
+queue/*/
+!queue/_*
+
+.DS_Store
+*.log
