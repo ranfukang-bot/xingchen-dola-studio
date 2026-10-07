@@ -1,0 +1,72 @@
+{
+  "manifest_version": 3,
+  "name": "星辰Dola无水印",
+  "version": "2.0.0",
+  "description": "支持统一面板提取豆包、Dola、千问和小云雀的无水印图片、视频资源。",
+  "permissions": [
+    "debugger",
+    "tabs",
+    "downloads"
+  ],
+  "host_permissions": [
+    "*://*.doubao.com/*",
+    "*://*.dola.com/*",
+    "*://*.byteintlapi.com/*",
+    "https://www.qianwen.com/*",
+    "https://xyq.jianying.com/*",
+    "https://everphoto-media.jianying.com/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.doubao.com/*",
+        "*://*.dola.com/*",
+        "https://www.qianwen.com/*",
+        "https://xyq.jianying.com/*"
+      ],
+      "js": [
+        "content-panel.js",
+        "xingchen-plugin-icon.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.qianwen.com/*"
+      ],
+      "js": [
+        "qianwen-content.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://xyq.jianying.com/*"
+      ],
+      "js": [
+        "xyq-content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "xingchen-plugin-icon.png"
+      ],
+      "matches": [
+        "*://*.doubao.com/*",
+        "*://*.dola.com/*",
+        "https://www.qianwen.com/*",
+        "https://xyq.jianying.com/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_title": "星辰Dola无水印"
+  }
+}

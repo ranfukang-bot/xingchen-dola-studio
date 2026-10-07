@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>星辰Dola创作台</title>
+<style>
+  :root {
+    --bg:#060912; --panel:#0d1321; --raised:#111a2c; --inset:#090f1c;
+    --text:#f4f7ff; --text2:#9ca8c0; --muted:#647089;
+    --accent:#819eff; --accent-strong:#667feb; --cyan:#70dce5;
+    --ok:#72ddb1; --warn:#f5c06c; --bad:#ff7f91;
+    --border:rgba(255,255,255,.11); --border-strong:rgba(129,158,255,.35);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; overflow:hidden; }
+  body {
+    background:var(--bg); color:var(--text);
+    font:13px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei UI", sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  button {
+    font:inherit; color:var(--text); background:var(--raised);
+    border:1px solid var(--border); border-radius:7px; padding:5px 11px;
+    cursor:pointer; white-space:nowrap; transition:.12s;
+  }
+  button:hover { border-color:var(--border-strong); background:#17223a; }
+  button:active { transform:translateY(1px); }
+  button.primary { background:var(--accent-strong); border-color:transparent; }
+  button.primary:hover { background:#7389f0; }
+  button.danger { color:var(--bad); }
+  button.sm { padding:3px 8px; font-size:11px; border-radius:6px; }
+  input[type=text], input[type=search], textarea, select {
+    font:inherit; color:var(--text); background:var(--inset);
+    border:1px solid var(--border); border-radius:7px; padding:5px 9px; outline:none;
+  }
+  input:focus, textarea:focus { border-color:var(--border-strong); }
+
+  /* ---------- 顶栏 ---------- */
+  #titlebar {
+    height:52px; flex:0 0 auto; display:flex; align-items:center; gap:8px;
+    padding:0 16px 0 86px; /* 给 macOS 红绿灯让位 */
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(63,79,150,.16), rgba(6,9,18,0));
+    -webkit-app-region:drag;
+  }
+  #titlebar button, #titlebar .nodrag { -webkit-app-region:no-drag; }
+  #brand { flex:1; display:flex; align-items:center; justify-content:center; gap:9px; }
+  #brand img { width:22px; height:22px; border-radius:5px; }
+  #brand span { font-size:15px; font-weight:700; letter-spacing:.5px; }
+  #ver {
+    font-size:11px; color:var(--cyan); border:1px solid var(--border);
+    border-radius:5px; padding:2px 8px; background:var(--inset);
+  }
+
+  /* ---------- 主体 ---------- */
+  #body { display:flex; height:calc(100% - 52px); }
+  #left { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #right {
+    width:330px; flex:0 0 330px; border-left:1px solid var(--border);
+    background:var(--panel); display:flex; flex-direction:column; min-height:0;
+  }
+
+  /* 浏览器工具条 */
+  #navbar {
+    flex:0 0 auto; display:flex; align-items:center; gap:7px;
+    padding:9px 12px; border-bottom:1px solid var(--border);
+  }
+  #url { flex:1; min-width:0; }
+  .navbtn { width:30px; text-align:center; padding:5px 0; }
+  #btnNoMark { color:var(--cyan); }
+  .durbtn.on { background:var(--accent-strong); border-color:transparent; }
+
+  /* webview 容器 */
+  #stage { flex:1; position:relative; background:#fff; min-height:0; }
+  #stage webview { position:absolute; inset:0; width:100%; height:100%; }
+  #stage webview.hidden { display:none; }
+  #empty {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:12px;
+    background:var(--bg); color:var(--muted);
+  }
+
+  /* 作品库 */
+  #lib { flex:0 0 auto; border-top:1px solid var(--border); background:var(--panel); }
+  #libHead { display:flex; align-items:center; gap:8px; padding:8px 12px; }
+  #libHead h3 { font-size:13px; font-weight:600; }
+  #libCount { color:var(--muted); font-size:11px; flex:1; }
+  #libList {
+    max-height:0; overflow-y:auto; transition:max-height .18s;
+    border-top:1px solid transparent;
+  }
+  #libList.open { max-height:200px; border-top-color:var(--border); }
+  .libItem {
+    display:flex; align-items:center; gap:10px; padding:6px 12px;
+    border-bottom:1px solid rgba(255,255,255,.05); font-size:12px;
+  }
+  .libItem:hover { background:var(--raised); }
+  .libItem .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .libItem .sz { color:var(--muted); font-size:11px; }
+
+  /* ---------- 右侧账号面板 ---------- */
+  #acctHead { padding:14px 14px 10px; border-bottom:1px solid var(--border); }
+  #acctHead .row1 { display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  #acctHead h2 { font-size:14px; font-weight:700; flex:1; }
+  #resident {
+    font-size:11px; background:var(--inset); border:1px solid var(--border);
+    border-radius:5px; padding:2px 8px; color:var(--cyan);
+  }
+  #expire { font-size:11px; color:var(--muted); margin-bottom:10px; }
+  #impGrid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+  #searchRow { display:flex; align-items:center; gap:7px; padding:10px 14px 6px; }
+  #searchRow label { font-size:12px; color:var(--text2); }
+  #search { flex:1; }
+  #countRow { padding:0 14px 8px; font-size:11px; color:var(--muted); }
+  #groupBar {
+    display:flex; align-items:center; gap:7px; padding:6px 14px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  #groupBar span { flex:1; font-size:12px; color:var(--text2); }
+  #acctList { flex:1; overflow-y:auto; padding:8px 10px 16px; min-height:0; }
+
+  .group { margin-bottom:10px; }
+  .groupHead {
+    display:flex; align-items:center; gap:7px; padding:6px 8px;
+    background:var(--raised); border:1px solid var(--border); border-radius:8px;
+  }
+  .groupHead .gname { flex:1; font-size:12px; font-weight:600; }
+  .groupHead .gcount { font-size:11px; color:var(--muted); }
+
+  .acct {
+    border:1px solid var(--border); border-radius:9px; padding:9px;
+    margin-top:7px; background:var(--inset);
+  }
+  .acct.active { border-color:var(--accent); background:#101a30; }
+  .acct .top { display:flex; align-items:center; gap:8px; }
+  .acct .avatar {
+    width:26px; height:26px; border-radius:6px; flex:0 0 auto;
+    background:var(--accent-strong); color:#fff; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .acct .meta { flex:1; min-width:0; }
+  .acct .nm {
+    font-size:12.5px; font-weight:600; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap;
+  }
+  .acct .st { font-size:11px; color:var(--muted); }
+  .acct .st.on { color:var(--ok); }
+  .acct .ops { display:flex; gap:5px; margin-top:8px; }
+  .acct .ops button { flex:1; }
+
+  /* ---------- 弹层 ---------- */
+  #mask {
+    position:fixed; inset:0; background:rgba(3,6,14,.72); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:50;
+  }
+  #mask.show { display:flex; }
+  .modal {
+    width:560px; max-width:92vw; background:var(--panel);
+    border:1px solid var(--border-strong); border-radius:13px; padding:18px;
+    box-shadow:0 24px 60px rgba(0,0,0,.6);
+  }
+  .modal h3 { font-size:15px; margin-bottom:4px; }
+  .modal .hint { font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.7; }
+  .modal textarea { width:100%; height:190px; resize:vertical; font:12px/1.5 ui-monospace, Menlo, monospace; }
+  .modal .foot { display:flex; gap:8px; justify-content:flex-end; margin-top:13px; }
+  .modal .fieldrow { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  .modal .fieldrow label { font-size:12px; color:var(--text2); width:68px; flex:0 0 auto; }
+  .modal .fieldrow input, .modal .fieldrow select { flex:1; }
+
+  #toast {
+    position:fixed; left:50%; bottom:34px; transform:translateX(-50%);
+    background:var(--raised); border:1px solid var(--border-strong);
+    border-radius:9px; padding:9px 16px; font-size:12.5px; z-index:60;
+    opacity:0; pointer-events:none; transition:.2s;
+  }
+  #toast.show { opacity:1; }
+  #toast.bad { border-color:var(--bad); color:var(--bad); }
+  #toast.ok { border-color:var(--ok); color:var(--ok); }
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <button class="nodrag" id="btnNotice">公告</button>
+  <button class="nodrag" id="btnBuyAcct">账号购买</button>
+  <button class="nodrag" id="btnBuyCard">卡密购买</button>
+  <button class="nodrag" id="btnMigrate">账号迁移</button>
+  <div id="brand">
+    <img id="brandIcon" alt="">
+    <span>星辰Dola创作台</span>
+  </div>
+  <span id="ver" class="nodrag">V2.6</span>
+</div>
+
+<div id="body">
+  <div id="left">
+    <div id="navbar">
+      <button class="navbtn" id="btnBack" title="后退">‹</button>
+      <button class="navbtn" id="btnFwd" title="前进">›</button>
+      <input type="text" id="url" spellcheck="false" placeholder="https://www.dola.com/chat/create-image">
+      <button class="navbtn" id="btnReload" title="刷新">⟳</button>
+      <button class="navbtn" id="btnHome" title="主页">⌂</button>
+      <button id="btnNoMark">无水印下载</button>
+      <button id="btnAssets">+ 素材</button>
+      <button class="durbtn" id="btn15" data-sec="15">15 秒</button>
+      <button class="durbtn" id="btn30" data-sec="30">30 秒</button>
+    </div>
+
+    <div id="stage">
+      <div id="empty">
+        <div>右侧选择一个账号即可打开独立浏览器会话</div>
+        <button class="primary" id="btnQuickAdd">导入 Dola Cookie 新建账号</button>
+      </div>
+    </div>
+
+    <div id="lib">
+      <div id="libHead">
+        <h3>作品库</h3>
+        <span id="libCount">0 个作品</span>
+        <button class="sm" id="btnLibRefresh">刷新</button>
+        <button class="sm" id="btnLibFolder">作品文件夹</button>
+        <button class="sm" id="btnLibToggle">展开</button>
+      </div>
+      <div id="libList"></div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div id="acctHead">
+      <div class="row1">
+        <h2>账号管理</h2>
+        <span id="resident">常驻 <b id="residentN">0</b></span>
+      </div>
+      <div id="expire">到期时间：离线永久版</div>
+      <div id="impGrid">
+        <button id="btnImpPwd">导入账号密码</button>
+        <button id="btnImpDola" class="primary">导入 Dola Cookie</button>
+        <button id="btnImpFb">导入 FB Cookie</button>
+        <button id="btnManual">手动登录</button>
+      </div>
+    </div>
+
+    <div id="searchRow">
+      <label>搜索</label>
+      <input type="search" id="search" placeholder="账号名 / 邮箱">
+      <button class="sm danger" id="btnClearAll">清空账号</button>
+    </div>
+    <div id="countRow">显示 <b id="shownN">0</b> / <b id="totalN">0</b></div>
+
+    <div id="groupBar">
+      <span>账号分组</span>
+      <button class="sm" id="btnSelectAll">全选</button>
+      <button class="sm" id="btnNewGroup">+ 新建</button>
+    </div>
+
+    <div id="acctList"></div>
+  </div>
+</div>
+
+<div id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script src="shell.js"></script>
+</body>
+</html>

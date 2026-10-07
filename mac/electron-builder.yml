@@ -1,0 +1,37 @@
+appId: top.dnd64.xingchen.dola.studio
+productName: 星辰Dola创作台
+copyright: Copyright (c) 2025 星辰Dola
+directories:
+  output: dist
+  buildResources: build
+files:
+  - src/**/*
+  - vendor/**/*
+  - package.json
+asarUnpack:
+  # 扩展与注入脚本必须以真实文件形式存在，便于 CDP / 脚本注入读取
+  - vendor/**/*
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
+  icon: build/icon.icns
+  darkModeSupport: true
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # 未做 Apple 公证：首次打开需在「系统设置 -> 隐私与安全性」中放行
+  identity: null
+dmg:
+  title: 星辰Dola创作台 ${version}
+  contents:
+    - x: 140
+      y: 180
+      type: file
+    - x: 400
+      y: 180
+      type: link
+      path: /Applications

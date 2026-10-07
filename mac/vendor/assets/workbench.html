@@ -1,0 +1,2467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>星辰 · 无限画布工作台</title>
+<style>
+  :root {
+    --bg: #060912; --panel: #0d1321; --raised: #111a2c; --inset: #090f1c;
+    --text: #f4f7ff; --text2: #9ca8c0; --muted: #647089;
+    --accent: #819eff; --accent-strong: #667feb; --cyan: #70dce5;
+    --ok: #72ddb1; --warn: #f5c06c; --bad: #ff7f91;
+    --border: rgba(255,255,255,.11); --border-strong: rgba(129,158,255,.35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.6 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    overflow: hidden;
+  }
+  #app { height: 100vh; display: flex; flex-direction: column; }
+  #header {
+    padding: 18px 26px 12px; display: flex; align-items: flex-start; gap: 18px;
+    border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(63,79,150,.14), rgba(6,9,18,0));
+  }
+  #header .titles { flex: 1; min-width: 0; }
+  #modTitle { font-size: 19px; font-weight: 700; letter-spacing: .5px; }
+  #modSub { color: var(--text2); font-size: 12px; margin-top: 2px; }
+  #hdrActions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  #content { flex: 1; overflow-y: auto; padding: 16px 26px 26px; position: relative; }
+  .page { display: none; max-width: 1240px; margin: 0 auto; }
+  .page.active { display: block; }
+  #page-Canvas.active { position: absolute; inset: 12px 26px 10px; display: flex; flex-direction: column; gap: 8px; max-width: none; }
+  #cvToolbar { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; flex: 0 0 auto; }
+  #cvStatus { color: var(--text2); font-size: 12px; margin-right: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+  #cvRootRow { display: none; align-items: center; gap: 8px; margin: 2px 0; flex: 0 0 auto; }
+  #cvRootRow input { flex: 1; }
+  #cvFrameWrap { flex: 1 1 auto; position: relative; background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; min-height: 0; }
+  #cvFrameWrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: none; }
+  #cvPlaceholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h3 { font-size: 13px; color: var(--text2); font-weight: 600; margin-bottom: 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+  .row:last-child { margin-bottom: 0; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: var(--muted); }
+  select, input[type=text], input[type=password], input[type=number], input:not([type]), textarea {
+    background: var(--inset); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; font: inherit; outline: none;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--border-strong); }
+  textarea { resize: vertical; min-height: 90px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--raised); color: var(--text); border: 1px solid var(--border);
+    border-radius: 9px; padding: 7px 16px; font: inherit; font-size: 12.5px; cursor: pointer;
+    transition: background .15s, border-color .15s; white-space: nowrap;
+  }
+  .btn:hover { background: #182238; border-color: var(--border-strong); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primary { background: var(--accent-strong); border-color: var(--accent); }
+  .btn.primary:hover { background: #7391f5; }
+  .btn.danger { color: var(--bad); border-color: rgba(255,127,145,.4); }
+  .btn.sm { padding: 4px 10px; font-size: 11.5px; border-radius: 7px; }
+
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 22px; min-width: 130px; }
+  .stat .k { font-size: 11px; color: var(--muted); }
+  .stat .v { font-size: 22px; font-weight: 700; color: var(--accent); margin-top: 2px; }
+
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  thead th { text-align: left; font-size: 11.5px; color: var(--muted); font-weight: 600; padding: 9px 12px; border-bottom: 1px solid var(--border); background: var(--raised); white-space: nowrap; }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 12.5px; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: rgba(129,158,255,.05); }
+  td.wrap { word-break: break-all; max-width: 380px; }
+  .empty { color: var(--muted); text-align: center; padding: 26px !important; }
+
+  .badge { display: inline-block; padding: 1px 9px; border-radius: 20px; font-size: 11px; white-space: nowrap; }
+  .b-ok    { background: rgba(114,221,177,.14); color: var(--ok); }
+  .b-warn  { background: rgba(245,192,108,.14); color: var(--warn); }
+  .b-bad   { background: rgba(255,127,145,.14); color: var(--bad); }
+  .b-idle  { background: rgba(100,112,137,.18); color: var(--text2); }
+  .b-run   { background: rgba(129,158,255,.16); color: var(--accent); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .tile .name { font-weight: 600; font-size: 12.5px; word-break: break-all; }
+  .tile .meta { color: var(--muted); font-size: 11px; margin: 4px 0 8px; }
+  .tile .ops { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .hint { color: var(--muted); font-size: 11.5px; margin: 6px 0 10px; }
+  .ok-text { color: var(--ok); } .bad-text { color: var(--bad); } .warn-text { color: var(--warn); }
+
+  #toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px);
+    background: var(--raised); border: 1px solid var(--border-strong); color: var(--text);
+    padding: 9px 22px; border-radius: 10px; opacity: 0; pointer-events: none; transition: all .25s; max-width: 70vw; z-index: 99; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 14px; }
+  .promptbox textarea { width: 100%; min-height: 96px; }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; align-items: center; }
+  .kv .k { color: var(--muted); font-size: 12px; }
+  .kv input { width: 100%; max-width: 460px; }
+  .copykey { font-family: Consolas, monospace; background: var(--inset); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="errdump" style="display:none;position:fixed;top:0;left:0;right:0;background:#5a1620;color:#ffd9dd;padding:8px 14px;font:11px Consolas,monospace;z-index:999;white-space:pre-wrap;max-height:40%;overflow:auto"></div>
+
+<style data-tq>
+/* ═══ 天启移植模块（星辰风格）═══ */
+.tq-tabs{display:flex;gap:8px;margin-bottom:12px}
+.tq-tab{background:#1c1c1c;border:1px solid #2e2e2e;color:#bbb;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px}
+.tq-tab.active{background:#2a2318;border-color:#c8a24b;color:#e8c87a}
+.tq-panel{background:#151515;border:1px solid #2a2a2a;border-radius:10px;padding:14px;margin-bottom:12px}
+.tq-form-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.tq-form-title h2{margin:0;font-size:15px;color:#eee}
+.tq-form-title p{margin:2px 0 0;font-size:12px;color:#888}
+.tq-live-pill{display:inline-flex;align-items:center;gap:6px;background:#1d2a1d;border:1px solid #2f4a2f;color:#8fce8f;font-size:11px;border-radius:20px;padding:3px 10px}
+.tq-live-pill i{width:7px;height:7px;border-radius:50%;background:#6fce6f;display:inline-block}
+.tq-control-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:10px}
+.tq-control-bar label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#999}
+.tq-control-bar select,.tq-control-bar input{background:#1c1c1c;border:1px solid #333;color:#ddd;border-radius:6px;padding:6px 8px;font-size:13px}
+.tq-material-head{display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px}
+.tq-material-head strong{font-size:13px;color:#ddd}
+.tq-material-head span{font-size:11px;color:#888}
+.tq-chips{display:flex;flex-wrap:wrap;gap:8px;min-height:40px}
+.tq-chip{width:104px;border:1px solid #333;border-radius:8px;padding:5px;position:relative;background:#1b1b1b}
+.tq-chip img{width:100%;height:52px;object-fit:cover;border-radius:4px;display:block}
+.tq-chip-icon{height:52px;display:flex;align-items:center;justify-content:center;font-size:26px;background:#111;border-radius:4px}
+.tq-chip-order{position:absolute;top:-6px;left:-6px;background:#c8a24b;color:#111;font-size:10px;padding:1px 6px;border-radius:6px;font-weight:700;z-index:2}
+.tq-chip-name{font-size:10px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:4px 0 3px}
+.tq-chip-ops{display:flex;gap:3px}
+.tq-chip-ops button{flex:1;background:#262626;border:0;color:#ccc;font-size:11px;border-radius:3px;cursor:pointer;padding:2px 0}
+.tq-chip-ops button:hover{background:#3a3a3a}
+.tq-drop{border:1px dashed #444;border-radius:8px;padding:12px;text-align:center;color:#777;font-size:12px;margin-top:8px}
+.tq-drop.over{border-color:#c8a24b;color:#c8a24b}
+.tq-status-line{display:flex;gap:10px;align-items:center;background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:10px;margin-top:10px}
+.tq-status-dot{width:10px;height:10px;border-radius:50%;background:#666;flex-shrink:0}
+.tq-status-dot.run{background:#e8c87a;box-shadow:0 0 8px #e8c87a88}
+.tq-status-dot.ok{background:#6fce6f}
+.tq-status-dot.bad{background:#e06c5a}
+.tq-runlog{max-height:220px;overflow:auto;font-family:Consolas,monospace;font-size:11px;color:#9a9a9a;background:#101010;border:1px solid #262626;border-radius:8px;padding:8px}
+.tq-runlog div{padding:1px 0;border-bottom:1px dashed #1e1e1e}
+.tq-cards{display:flex;flex-direction:column;gap:8px}
+.tq-card{background:#181818;border:1px solid #2a2a2a;border-radius:8px;padding:10px;display:flex;gap:10px;align-items:flex-start}
+.tq-card .tnum{background:#2a2a2a;color:#e8c87a;border-radius:6px;min-width:34px;text-align:center;padding:4px 0;font-weight:700}
+.tq-card .tbody{flex:1;min-width:0}
+.tq-card .tprompt{font-size:12px;color:#ccc;margin-bottom:6px;word-break:break-all}
+.tq-card .tmeta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#888;align-items:center}
+.tq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.tq-grid-card{background:#161616;border:1px solid #2a2a2a;border-radius:8px;overflow:hidden}
+.tq-grid-card img,.tq-grid-card .ph{width:100%;height:110px;object-fit:cover;display:block;background:#111}
+.tq-grid-card .ph{display:flex;align-items:center;justify-content:center;font-size:34px;color:#555}
+.tq-grid-card .gc-body{padding:8px}
+.tq-grid-card .gc-name{font-size:12px;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tq-grid-card .gc-meta{font-size:11px;color:#777;margin:3px 0 6px}
+.tq-grid-card .gc-ops{display:flex;gap:4px;flex-wrap:wrap}
+.tq-grid-card .gc-ops .btn{padding:2px 8px;font-size:11px}
+.tq-stats{display:flex;gap:10px;margin-bottom:12px}
+.tq-stat{flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:10px;text-align:center}
+.tq-stat span{font-size:11px;color:#888;display:block}
+.tq-stat strong{font-size:20px;color:#eee}
+.tq-stat.ok strong{color:#6fce6f}.tq-stat.warn strong{color:#e8c87a}.tq-stat.bad strong{color:#e06c5a}
+.tq-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tq-filter{background:#1c1c1c;border:1px solid #2e2e2e;color:#aaa;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px}
+.tq-filter.active{background:#2a2318;border-color:#c8a24b;color:#e8c87a}
+.tq-search{background:#1c1c1c;border:1px solid #333;color:#ddd;border-radius:6px;padding:6px 10px;font-size:12px;min-width:200px}
+.tq-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.tq-heading h2{margin:0;font-size:16px;color:#eee}
+.tq-heading p{margin:2px 0 0;font-size:12px;color:#888}
+.tq-heading .ops{display:flex;gap:8px;flex-wrap:wrap}
+.tq-iframe-wrap{position:relative;height:calc(100vh - 190px);min-height:480px;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;background:#0d0d0d}
+.tq-iframe-wrap iframe{width:100%;height:100%;border:0}
+.tq-empty{color:#666;font-size:12px;text-align:center;padding:22px 0}
+.tq-hint{font-size:11px;color:#777}
+</style>
+
+<!-- ═══ 天启移植：视频生成2 ═══ -->
+<section class="page" id="page-Video2">
+  <div class="tq-tabs"><button class="tq-tab active" data-v2tab="single">▣ 单次生成</button></div>
+  <div class="tq-panel">
+    <div class="tq-form-title"><div><h2>生成设置</h2><p>配置提示词和有序参考图，任务创建后实时更新</p></div><span class="tq-live-pill"><i></i> Dola 在线</span></div>
+    <div class="field"><label>提示词</label><textarea id="v2Prompt" rows="7" placeholder="描述主体、动作、镜头、光线和风格。可用“图1”“图2”指代参考图"></textarea></div>
+    <div class="tq-material-head"><strong>参考素材（可选 · 按顺序）</strong><span>添加后按顺序作为 图1、图2… 引用；最多 20 个，单个 ≤10MB</span></div>
+    <div class="tq-chips" id="v2Chips"></div>
+    <div class="tq-drop" id="v2Drop">点击“添加参考图”选择文件，或拖放图片/视频/音频到这里</div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="v2Pick">＋ 添加参考图</button><input type="file" id="v2File" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.m4v,.mp3,.wav,.m4a" style="display:none"></div>
+    <div class="tq-control-bar">
+      <label>比例<select id="v2Ratio"><option>9:16</option><option>16:9</option><option>1:1</option><option>3:4</option><option>4:3</option><option>21:9</option></select></label>
+      <label>模型<select id="v2Model"><option value="seedance-2.5">Seedance 2.5</option><option value="seedance-2.0-fast">Seedance 2.0 Fast</option></select></label>
+      <label>清晰度<select id="v2Quality"><option>720p</option><option>1080p</option></select></label>
+      <label>时长<select id="v2Duration"></select></label>
+      <label>账号<select id="v2Account"><option value="">自动轮转</option></select></label>
+      <button class="btn primary" id="v2Go">🚀 开始生成</button>
+    </div>
+    <div class="tq-status-line"><div class="tq-status-dot" id="v2Dot"></div><div><strong id="v2StatusTitle">等待开始</strong><p id="v2StatusMsg" style="margin:2px 0 0;font-size:12px;color:#888">选择账号并填写提示词后开始生成。</p></div></div>
+  </div>
+  <div class="tq-panel"><div class="tq-form-title"><div><h2>运行日志</h2><p>实时记录任务创建、上传、发送和结果</p></div></div><div class="tq-runlog" id="v2Log"><div>暂无日志</div></div></div>
+</section>
+<!-- ═══ 天启移植：批量生成2 ═══ -->
+<section class="page" id="page-Batch2">
+  <div class="tq-heading"><div><h2>批量生成</h2><p id="b2Summary">分镜任务 · 导入表格 · 有序参考图 · 队列执行</p></div>
+    <div class="ops"><button class="btn" id="b2Import">导入分镜（xlsx/csv）</button><input type="file" id="b2ImportFile" accept=".xlsx,.csv" style="display:none"><button class="btn primary" id="b2QueueAll">全部排队</button><button class="btn" id="b2Stop">停止队列</button></div>
+  </div>
+  <div class="tq-panel">
+    <div class="tq-control-bar" style="margin:0 0 10px">
+      <label>项目名称<input id="b2Name" placeholder="例如：重振晚明 · 第一集"></label>
+      <label>模型<select id="b2Model"><option value="seedance-2.5">Seedance 2.5</option><option value="seedance-2.0-fast">Seedance 2.0 Fast</option></select></label>
+      <label>画幅<select id="b2Ratio"><option>9:16</option><option>16:9</option><option>1:1</option><option>3:4</option><option>4:3</option><option>21:9</option></select></label>
+      <label>时长<select id="b2Duration"></select></label>
+      <label>账号<select id="b2Account"><option value="">自动轮转</option></select></label>
+    </div>
+    <div class="field"><label>添加分镜任务（每行一个提示词；行内可用“图1”“图2”指代下方参考图）</label><textarea id="b2Prompt" rows="5" placeholder="镜头1：小猫在窗边伸懒腰&#10;镜头2：镜头推近，小猫看向窗外"></textarea></div>
+    <div class="tq-material-head"><strong>项目参考素材（按顺序 · 应用于所有分镜）</strong><span>顺序即 图1、图2…</span></div>
+    <div class="tq-chips" id="b2Chips"></div>
+    <div class="tq-drop" id="b2Drop">点击“添加参考图”或拖放文件到这里</div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="b2Pick">＋ 添加参考图</button><input type="file" id="b2File" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.m4v,.mp3,.wav,.m4a" style="display:none"></div>
+  </div>
+  <div class="tq-panel"><div class="tq-form-title"><div><h2>分镜任务</h2><p>创建后进入队列，成功自动下载到作品库</p></div><span class="tq-hint" id="b2Count">0 条</span></div><div class="tq-cards" id="b2Cards"></div><div class="tq-empty" id="b2Empty">暂无任务。在上方添加分镜，或导入带表头的 Excel / CSV。</div></div>
+</section>
+<!-- ═══ 天启移植：无限画布2 ═══ -->
+<section class="page" id="page-Canvas2">
+  <div class="tq-heading"><div><h2>无限画布</h2><p>节点编排、导演台和 AI 创作工作区</p></div>
+    <div class="ops"><button class="btn" id="cv2Reload">重新连接</button><button class="btn" id="cv2Open" disabled>在浏览器打开</button></div>
+  </div>
+  <div class="tq-status-line" style="margin-bottom:10px"><div class="tq-status-dot" id="cv2Dot"></div><div><span id="cv2Msg" style="font-size:12px;color:#aaa">正在准备无限画布服务…</span></div></div>
+  <div class="tq-iframe-wrap"><iframe id="cv2Frame" title="无限画布2"></iframe></div>
+</section>
+<!-- ═══ 天启移植：生成日志2 ═══ -->
+<section class="page" id="page-Logs2">
+  <div class="tq-heading"><div><h2>生成日志</h2><p>按时间查看任务创建、提交、接受、下载和失败原因</p></div>
+    <div class="ops"><button class="btn" id="lg2Refresh">刷新</button><button class="btn" id="lg2Clear">清空日志</button></div>
+  </div>
+  <div class="tq-stats"><div class="tq-stat"><span>全部事件</span><strong id="lg2All">0</strong></div><div class="tq-stat ok"><span>成功</span><strong id="lg2Ok">0</strong></div><div class="tq-stat warn"><span>进行中</span><strong id="lg2Run">0</strong></div><div class="tq-stat bad"><span>失败</span><strong id="lg2Bad">0</strong></div></div>
+  <div class="tq-panel" style="padding:0"><div class="tq-runlog" id="lg2List" style="max-height:60vh"></div></div>
+</section>
+<!-- ═══ 天启移植：媒体库2 ═══ -->
+<section class="page" id="page-Media2">
+  <div class="tq-heading"><div><h2>媒体库</h2><p>管理已下载的成品视频和图片</p></div>
+    <div class="ops"><button class="btn" id="md2Folder">打开媒体库目录</button><button class="btn" id="md2Refresh">刷新</button></div>
+  </div>
+  <div class="tq-filters"><button class="tq-filter active" data-md2="all">全部</button><button class="tq-filter" data-md2="视频">视频</button><button class="tq-filter" data-md2="图片">图片</button></div>
+  <div class="tq-grid" id="md2Grid"></div><div class="tq-empty" id="md2Empty">暂无媒体</div>
+</section>
+<!-- ═══ 天启移植：资产库2 ═══ -->
+<section class="page" id="page-Assets2">
+  <div class="tq-heading"><div><h2>资产库</h2><p>角色、场景、道具和其他资产可拖入提示词 @引用</p></div>
+    <div class="ops"><button class="btn primary" id="as2Add">添加本地资产</button><input type="file" id="as2File" multiple style="display:none"></div>
+  </div>
+  <div class="tq-filters"><button class="tq-filter active" data-as2="all">全部</button><button class="tq-filter" data-as2="角色">角色</button><button class="tq-filter" data-as2="场景">场景</button><button class="tq-filter" data-as2="道具">道具</button><button class="tq-filter" data-as2="">其他</button></div>
+  <div style="margin-bottom:10px"><input class="tq-search" id="as2Search" placeholder="搜索资产名称或别名"></div>
+  <div class="tq-grid" id="as2Grid"></div><div class="tq-empty" id="as2Empty">暂无资产。添加本地图片、视频或音频后即可在提示词中使用 @资产名。</div>
+</section>
+
+<script>
+var NL = String.fromCharCode(10);
+window.__errsFlush = function () {
+  var err = document.getElementById('errdump');
+  var errs = window.__errs.filter(function (x) { return x.indexOf('ERR') === 0 || x.indexOf('REJECT') === 0; });
+  if (err && errs.length) {
+    err.style.display = 'block';
+    err.textContent = errs.join(NL);
+  }
+};
+</script>
+<div id="app">
+  <div id="header">
+    <div class="titles">
+      <div id="modTitle">账号管理</div>
+      <div id="modSub">导入 · 检测 · 分组 · 额度 · Cookie 导出</div>
+    </div>
+    <div id="hdrActions"></div>
+  </div>
+  <div id="content">
+
+    <!-- ═══ 账号管理 ═══ -->
+    <section class="page" id="page-Accounts">
+      <div class="stats" id="accStats"></div>
+      <div class="card">
+        <h3>导入账号</h3>
+        <div class="row">
+          <button class="btn primary" onclick="rpcStart('accounts.importGoogle')">导入谷歌账号</button>
+          <button class="btn" onclick="rpcStart('accounts.importDola')">导入 Dola Cookie</button>
+          <button class="btn" onclick="rpcStart('accounts.importFb')">导入 Facebook Cookie</button>
+          <button class="btn" onclick="rpcStart('accounts.manual')">手动登录</button>
+        </div>
+        <div class="hint">导入账号支持选择分组；导入完成后列表自动刷新。</div>
+      </div>
+      <div class="bar">
+        <button class="btn sm" onclick="loadAccounts()">刷新</button>
+        <button class="btn sm" onclick="checkSelected()">检测所选</button>
+        <button class="btn sm danger" id="btnStopCheck" onclick="stopCheck()" style="display:none">停止检测</button>
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim,#64748b)">检测并发
+          <input type="number" id="checkConcurrency" min="1" step="1" value="3" style="width:54px" onchange="checkConcurrencyLimit()" title="同时检测的账号数量（不设上限），重启后保留">
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim,#64748b)">创建浏览器并发
+          <input type="number" id="browserCreationConcurrency" min="1" step="1" value="1" style="width:54px" onchange="setBrowserCreationConcurrency()" title="同时创建账号浏览器的数量（浏览器未打开的账号检测/打开窗口时先创建），改动立即生效并保存">
+        </label>
+        <select id="accStatusFilter" onchange="applyStatusFilter()" style="width:160px" title="按状态筛选账号，展开可查看各状态的账号数"></select>
+        <select id="accGroupFilter" onchange="applyGroupFilter()" style="width:150px" title="按分组筛选账号，展开可查看各分组的账号数"></select>
+        <select id="accLoginTypeFilter" onchange="applyLoginTypeFilter()" style="width:130px" title="按登录类型筛选账号，展开可查看各类型的账号数"></select>
+        <button class="btn sm" onclick="manageGroups()">管理分组</button>
+        <button class="btn sm" onclick="closeAllWindows()">关闭所有窗口</button>
+        <button class="btn sm" onclick="quotaSelected()">查额度</button>
+        <button class="btn sm" onclick="exportCookieSelected()">导出 Cookie</button>
+        <button class="btn sm" onclick="openSelected()">打开窗口</button>
+        <button class="btn sm" onclick="moveSelected()">移动分组</button>
+        <button class="btn sm" onclick="assignProxySelected()">应用代理</button>
+        <button class="btn sm danger" onclick="deleteSelected()">删除所选</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th style="width:30px"><input type="checkbox" id="accAll" onchange="toggleAllAccounts(this)"></th>
+          <th>分组</th><th>账号</th><th>状态</th><th>视频额度</th><th>代理</th><th>最近检测</th><th style="width:210px">操作</th>
+        </tr></thead>
+        <tbody id="accRows"><tr><td class="empty" colspan="8">加载中…</td></tr></tbody>
+      </table>
+    </section>
+
+    <!-- ═══ 图片生成 ═══ -->
+    <section class="page" id="page-ImageGeneration">
+      <div class="card">
+        <div class="formgrid">
+          <div class="field"><label>模型</label>
+            <select id="imgModel" onchange="onImgModel()"><option value="seedream-5.0-pro">Seedream 5.0 Pro（Dola 账号）</option><option value="image2">Image2（外部生图 API）</option></select></div>
+          <div class="field"><label>比例</label>
+            <select id="imgRatio"><option>1:1</option><option>16:9</option><option>9:16</option><option>4:3</option><option>3:4</option><option>21:9</option></select></div>
+          <div class="field" id="imgResField" style="display:none"><label>分辨率（仅 Image2）</label>
+            <select id="imgRes"><option>2K</option><option>1K</option><option>4K</option></select></div>
+          <div class="field" id="imgAccountField"><label>账号</label>
+            <div style="display:flex;gap:6px;align-items:center"><select id="imgAccount" style="flex:1;min-width:0"></select><button class="btn sm" onclick="openGenAccount('imgAccount')" title="打开该账号的浏览器窗口">打开</button></div></div>
+          <div class="field" id="imgStyleField"><label>风格（可选）</label><input type="text" id="imgStyle" list="styleList" placeholder="留空 = 默认"><datalist id="styleList"><option>动漫</option><option>人像摄影</option><option>风景</option><option>3D渲染</option><option>赛博朋克</option><option>油画</option><option>水彩画</option><option>平面插画</option><option>儿童绘画</option><option>像素风格</option><option>彩铅画</option><option>水墨画</option><option>油墨印刷</option></datalist></div>
+        </div>
+        <div class="field promptbox" style="margin-top:10px"><label>提示词</label>
+          <textarea id="imgPrompt" placeholder="描述你想生成的图片…"></textarea></div>
+          <div class="tq-material-head"><strong>参考图（按顺序）</strong><span>提示词中用 图1、图2… 引用；最多 20 个，单个 ≤10MB</span></div>
+                  <div class="tq-chips" id="imgRefChips"></div>
+                  <div class="row" style="margin-top:6px"><button class="btn" id="imgRefPick">＋ 添加参考图</button><input type="file" id="imgRefFile" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp" style="display:none"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="imgGo" onclick="submitImage()">生成图片</button>
+          <span class="hint" style="align-self:center;margin:0">Seedream 5.0 Pro 走 Dola 号池（比例 / 分辨率 / 风格 / 账号均生效）；Image2 走「AI 模型配置」的外部生图 API（比例 + 分辨率映射为输出尺寸，无风格 / 账号）。</span>
+        </div>
+      </div>
+      <table><thead><tr><th>时间</th><th>模型</th><th>状态</th><th>账号</th><th>结果</th><th style="width:70px">操作</th></tr></thead>
+        <tbody id="imgRows"><tr><td class="empty" colspan="6">暂无任务</td></tr></tbody></table>
+      <div class="row" id="imgPager" style="margin-top:6px;align-items:center;gap:8px"></div>
+    </section>
+
+    <!-- ═══ 视频生成 ═══ -->
+    <section class="page" id="page-VideoGeneration">
+      <div class="card">
+        <div class="formgrid">
+          <div class="field"><label>模型</label>
+            <select id="vidModel" onchange="onVidModel()"><option value="seedance-2.0-fast">Seedance 2.0 Fast</option><option value="seedance-2.5">Seedance 2.5</option></select></div>
+          <div class="field"><label>时长</label><select id="vidDuration"><option>5</option><option>10</option><option>15</option></select></div>
+          <div class="field"><label>比例</label>
+            <select id="vidRatio"><option>9:16</option><option>16:9</option><option>1:1</option><option>3:4</option><option>4:3</option><option>21:9</option></select></div>
+          <div class="field"><label>账号</label>
+            <div style="display:flex;gap:6px;align-items:center"><select id="vidAccount" style="flex:1;min-width:0"></select><button class="btn sm" onclick="openGenAccount('vidAccount')" title="打开该账号的浏览器窗口">打开</button></div></div>
+        </div>
+        <div class="field promptbox" style="margin-top:10px"><label>提示词</label>
+          <textarea id="vidPrompt" placeholder="描述你想生成的视频…"></textarea></div>
+          <div class="tq-material-head"><strong>参考图（按顺序）</strong><span>提示词中用 图1、图2… 引用；最多 20 个，单个 ≤10MB</span></div>
+                  <div class="tq-chips" id="vidRefChips"></div>
+                  <div class="row" style="margin-top:6px"><button class="btn" id="vidRefPick">＋ 添加参考图</button><input type="file" id="vidRefFile" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.m4v,.mp3,.wav,.m4a" style="display:none"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="vidGo" onclick="submitVideo()">生成视频</button>
+          <span class="hint" style="align-self:center;margin:0">走号池队列；30 秒任务通常 2-6 分钟出结果。Dola 视频接口无分辨率选项，输出清晰度由模型决定。</span>
+        </div>
+      </div>
+      <table><thead><tr><th>时间</th><th>模型</th><th>状态</th><th>账号</th><th>结果</th><th style="width:70px">操作</th></tr></thead>
+        <tbody id="vidRows"><tr><td class="empty" colspan="6">暂无任务</td></tr></tbody></table>
+      <div class="row" id="vidPager" style="margin-top:6px;align-items:center;gap:8px"></div>
+    </section>
+
+    <!-- ═══ 批量生成 ═══ -->
+    <section class="page" id="page-BatchGeneration">
+      <div class="card">
+        <div class="formgrid">
+          <div class="field"><label>类型</label>
+            <select id="batKind" onchange="onBatKind()"><option value="video">视频</option><option value="image">图片</option></select></div>
+          <div class="field"><label>模型</label><select id="batModel" onchange="onBatModel()"></select></div>
+          <div class="field" id="batDurationField"><label>时长（秒）</label><select id="batDuration"><option>5</option><option>10</option><option>15</option></select></div>
+          <div class="field"><label>比例</label>
+            <select id="batRatio"><option>9:16</option><option>16:9</option><option>1:1</option><option>3:4</option><option>4:3</option><option>21:9</option></select></div>
+          <div class="field" id="batResField"><label>分辨率（图片）</label><select id="batRes"><option>2K</option><option>1K</option><option>4K</option></select></div>
+          <div class="field"><label>账号范围</label><select id="batGroup"></select></div>
+          <div class="field"><label>指定账号（可选）</label><select id="batAccount"><option value="">按范围轮转</option></select></div>
+          <div class="field" id="batStyleField" style="display:none"><label>风格（图片）</label>
+            <select id="batStyle"><option value="">默认</option><option>动漫</option><option>人像摄影</option><option>风景</option><option>3D渲染</option><option>赛博朋克</option><option>油画</option><option>水彩画</option><option>平面插画</option><option>儿童绘画</option><option>像素风格</option><option>彩铅画</option><option>水墨画</option><option>油墨印刷</option></select></div>
+        </div>
+        <div class="field promptbox" style="margin-top:10px"><label>提示词（每行一个任务，# 开头为注释；可用 @素材别名 引用参考素材）</label>
+          <textarea id="batPrompts" style="min-height:130px"></textarea></div>
+          <div class="tq-material-head"><strong>参考图（按顺序）</strong><span>提示词中用 图1、图2… 引用；最多 20 个，单个 ≤10MB</span></div>
+                  <div class="tq-chips" id="batRefChips"></div>
+                  <div class="row" style="margin-top:6px"><button class="btn" id="batRefPick">＋ 添加参考图</button><input type="file" id="batRefFile" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.m4v,.mp3,.wav,.m4a" style="display:none"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="batGo" onclick="startBatch()">开始批量生成</button>
+          <button class="btn" id="batStop" onclick="rpc('batch.stop').then(loadBatchState)" disabled>停止</button>
+          <button class="btn" onclick="document.getElementById('batFile').click()">📋 导入表格（xlsx/csv）</button>
+          <button class="btn" onclick="downloadBatchTemplate()">⬇ 下载表格模板</button>
+          <button class="btn" onclick="downloadBatchGuide()">⬇ 填写说明</button>
+          <input type="file" id="batFile" accept=".xlsx,.csv" style="display:none" onchange="importBatchTable(this)">
+          <span class="hint" id="batImportHint" style="align-self:center;margin:0"></span>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <span class="hint" id="batProgress" style="align-self:center;margin:0">就绪 · 账号按分组轮转，逐个串行执行；运行中也可继续提交（自动排队）</span>
+        </div>
+      </div>
+      <table><thead><tr><th>任务</th><th>状态</th><th>账号</th><th>结果（点击查看）</th><th>操作</th></tr></thead>
+        <tbody id="batRows"><tr><td class="empty" colspan="5">尚未开始</td></tr></tbody></table>
+    </section>
+
+    <!-- ═══ 无限画布 ═══ -->
+    <section class="page" id="page-Canvas">
+      <div id="cvToolbar">
+        <span id="cvStatus">未启动</span>
+        <button class="btn primary sm" id="cvStart" onclick="startCanvas()">启动画布</button>
+        <button class="btn sm" id="cvStop" onclick="stopCanvas()" style="display:none">停止画布</button>
+        <button class="btn sm" id="cvOpen" onclick="openCanvasExternal()" disabled>在浏览器打开</button>
+        <span style="flex:1"></span>
+        <button class="btn sm" onclick="toggleCvRoot()">⚙ 运行时目录</button>
+      </div>
+      <div id="cvRootRow">
+        <input type="text" id="cvRoot" placeholder="画布运行时目录（留空自动探测，需含 infinite-canvas-server.exe）">
+        <span class="hint" style="margin:0">改动后点击「启动画布」生效</span>
+      </div>
+      <div id="cvFrameWrap">
+        <div id="cvPlaceholder">画布未启动 —— 正在自动启动，首次约需 5-20 秒…</div>
+        <iframe id="cvFrame"></iframe>
+      </div>
+    </section>
+
+    <!-- ═══ 资产库 ═══ -->
+    <section class="page" id="page-Assets">
+      <div class="bar">
+        <button class="btn primary" onclick="document.getElementById('assetFile').click()">导入素材</button>
+        <button class="btn" onclick="openAssetsDir()">打开素材目录</button>
+        <button class="btn" onclick="loadAssets()">刷新</button>
+        <input type="file" id="assetFile" style="display:none" onchange="importAsset(this)">
+      </div>
+      <div class="hint" id="assetHint"></div>
+      <div class="grid" id="assetGrid"></div>
+    </section>
+
+    <!-- ═══ 作品库 ═══ -->
+    <section class="page" id="page-Works">
+      <div class="bar">
+        <button class="btn sm" onclick="loadWorks()">刷新</button>
+        <button class="btn sm" onclick="rpc('works.openFolder').catch(e => toast(e.message))">打开作品文件夹</button>
+        <div class="field" style="margin-left:auto"><label>按账号筛选</label>
+          <select id="worksAccount" onchange="renderWorks()"><option value="">全部账号</option></select></div>
+      </div>
+      <div class="hint">与 Dola 模块的作品库同源（media.json + 作品目录），两侧增删自动同步。</div>
+      <div class="grid" id="worksGrid"></div>
+    </section>
+
+    <!-- ═══ 生成日志 ═══ -->
+    <section class="page" id="page-GenerationLogs">
+      <div class="bar">
+        <button class="btn sm" onclick="loadLogs()">刷新</button>
+        <select id="logStatusFilter" onchange="renderLogs()" style="width:110px" title="按状态筛选日志">
+          <option value="">全部</option><option value="running">进行中</option><option value="completed">成功</option><option value="failed">失败</option>
+        </select>
+        <input type="text" id="logSearch" placeholder="搜索账号 / 提示词 / 模型 / 来源" style="flex:1;min-width:200px" oninput="renderLogs()">
+        <button class="btn sm" onclick="exportLogs()">导出 CSV</button>
+        <button class="btn sm danger" onclick="clearLogs()">清空记录</button>
+      </div>
+      <table><thead><tr><th>时间</th><th>类型</th><th>模型</th><th>账号</th><th>提示词</th><th>来源</th><th>状态</th><th>耗时</th><th>结果/错误</th><th style="width:90px">操作</th></tr></thead>
+        <tbody id="logRows"><tr><td class="empty" colspan="10">加载中…</td></tr></tbody></table>
+    </section>
+
+    <!-- ═══ 代理管理 ═══ -->
+    <section class="page" id="page-Proxy">
+      <div class="stats" id="pxStats"></div>
+      <div class="card">
+        <h3>添加代理</h3>
+        <div class="formgrid">
+          <div class="field"><label>协议</label>
+            <select id="pxScheme" onchange="onProxySchemeChange()"><option value="socks5">SOCKS5</option><option value="http">HTTP</option><option value="https">HTTPS</option></select></div>
+          <div class="field"><label>地址</label><input type="text" id="pxHost" placeholder="域名或 IP"></div>
+          <div class="field"><label>端口</label><input type="text" id="pxPort" placeholder="1-65535"></div>
+          <div class="field" id="pxUserField"><label>账号（可选）</label><input type="text" id="pxUser" placeholder="部分代理需要认证"></div>
+          <div class="field" id="pxPassField"><label>密码（可选）</label><input type="password" id="pxPass" placeholder="部分代理需要认证"></div>
+        </div>
+        <div class="row" style="margin-top:10px;align-items:center">
+          <button class="btn" onclick="probeProxyForm()">检测连通性</button>
+          <button class="btn primary" onclick="addProxyFromForm()">添加代理</button>
+          <span id="pxProbeResult" class="hint" style="margin:0"></span>
+        </div>
+        <div class="hint">账号、密码留空 = 免认证代理；认证会自动拼接为 账号:密码@地址:端口。「添加代理」先做真实握手探测（含认证），失败会给出具体原因。注意：带认证的 SOCKS5 无法被 Chromium 内核直接使用，「检测连通性」会明确提示。</div>
+      </div>
+      <div class="card">
+        <h3>批量导入</h3>
+        <div class="field"><label>每行一条，# 开头为注释，自动去重</label>
+          <textarea id="proxyInput" style="min-height:84px" placeholder="socks5://host:port&#10;socks5://user:pass@host:port&#10;http://host:port&#10;https://host:port&#10;host:port&#10;host:port:socks5"></textarea></div>
+        <div class="hint">支持的批量格式（每行一条）：<br>
+          ① socks5://地址:端口　② socks5://账号:密码@地址:端口（认证）　③ http://地址:端口　④ https://地址:端口<br>
+          ⑤ 地址:端口（默认按 http 处理）　⑥ 地址:端口:socks5（也可写 :http / :https）</div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn primary" onclick="importProxies()">导入以上代理</button>
+          <button class="btn" onclick="checkProxies()">检测全部</button>
+          <button class="btn danger" onclick="clearProxies()">清空</button>
+        </div>
+        <div class="hint">勾选多个账号 → 点「应用代理」可为全部勾选账号批量选择代理（含本地直连）；代理在账号浏览器创建时生效（已打开的窗口需重开）。</div>
+      </div>
+      <table><thead><tr><th>名称（点击重命名）</th><th>代理地址</th><th>类型</th><th>连通性</th><th>延迟</th><th>检测时间</th><th style="width:70px">操作</th></tr></thead>
+        <tbody id="proxyRows"><tr><td class="empty" colspan="7">加载中…</td></tr></tbody></table>
+    </section>
+
+    <!-- ═══ AI 模型配置 ═══ -->
+    <section class="page" id="page-AiModel">
+      <div class="card">
+        <h3>LLM（文本对话，供画布 Agent 等使用）</h3>
+        <div class="kv">
+          <div class="k">接口地址</div><div><input type="text" id="llmBase" placeholder="https://…/v1"></div>
+          <div class="k">API Key</div><div><input type="password" id="llmKey"></div>
+          <div class="k">模型名</div><div style="display:flex;gap:6px;align-items:center"><input type="text" id="llmModel" placeholder="gpt-4o / deepseek-chat …" style="flex:1"><button class="btn sm" onclick="fetchAiModels('llm')">获取模型</button></div>
+          <div class="k">上游模型</div><div><select id="llmModelPick" style="display:none" onchange="applyAiModelPick('llm')"></select></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>生图（Image2 模型的外部 API；Seedream 5.0 Pro 走 Dola 号池）</h3>
+        <div class="kv">
+          <div class="k">接口地址</div><div><input type="text" id="imageBase" placeholder="https://…/v1"></div>
+          <div class="k">API Key</div><div><input type="password" id="imageKey"></div>
+          <div class="k">模型名</div><div style="display:flex;gap:6px;align-items:center"><input type="text" id="imageModel" placeholder="image2" style="flex:1"><button class="btn sm" onclick="fetchAiModels('image')">获取模型</button></div>
+          <div class="k">上游模型</div><div><select id="imageModelPick" style="display:none" onchange="applyAiModelPick('image')"></select></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" onclick="saveAi()">保存配置</button>
+          <span class="hint" style="align-self:center;margin:0">无限画布的 AI 渠道也可在画布管理后台指向本机「API 服务」地址。</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ API 服务 ═══ -->
+    <section class="page" id="page-ApiServer">
+      <div class="stats">
+        <div class="stat"><div class="k">状态</div><div class="v" id="apiRunning">—</div></div>
+        <div class="stat"><div class="k">端口</div><div class="v" id="apiPort" style="color:var(--text)">—</div></div>
+      </div>
+      <div class="card">
+        <h3>访问凭据（点击复制）</h3>
+        <div class="kv">
+          <div class="k">Base URL</div><div><span class="copykey" id="apiBase" onclick="copyText(this.textContent)">—</span></div>
+          <div class="k">API Key</div><div><span class="copykey" id="apiKey" onclick="copyText(this.textContent)">—</span></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" onclick="rpc('api.restart').then(() => loadApi())">重启服务</button>
+          <button class="btn" onclick="saveApiDocs()">下载 API 文档</button>
+          <div class="hint" style="margin-top:10px">支持的模型与参数：<br>
+            · 视频 <b>seedance-2.0-fast</b>：时长 5/10/15 秒（1/2/3 额度），比例 9:16/16:9/1:1/3:4/4:3/21:9<br>
+            · 视频 <b>seedance-2.5</b>：时长 30 秒（2 额度），比例同上<br>
+            · 图片 <b>seedream-5.0-pro</b>（Dola 号池）：比例 1:1/16:9/9:16/4:3/3:4/21:9，风格可选<br>
+            · 图片 <b>image2</b>（外部生图 API）：size 由分辨率+比例折算（1K/2K/4K）<br>
+            视频接口无分辨率参数；图片 Seedream 官方无分辨率选项。</div>
+        </div>
+        <div class="hint">把本地 Dola 号池以 OpenAI 风格 REST API 暴露给其他工具：
+          <code>POST /v1/images/generations</code> · <code>POST /v1/videos/generations</code> · <code>GET /v1/videos/&#123;id&#125;</code> · <code>GET /v1/quota</code> · <code>GET /v1/capabilities</code> · 认证：<code>Authorization: Bearer &lt;key&gt;</code></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+window.__errs = [];
+window.onerror = function (msg, src, line) {
+  window.__errs.push((msg || 'unknown') + ' @' + (line || 0));
+  window.__errsFlush && window.__errsFlush();
+  return false;
+};
+window.addEventListener('unhandledrejection', function (e) {
+  window.__errs.push('REJECT: ' + ((e.reason && e.reason.message) || e.reason));
+  window.__errsFlush && window.__errsFlush();
+});
+window.__dbg = function () { };
+</script>
+
+<script>
+'use strict';
+/* ═══════════ rpc bridge ═══════════ */
+const _pending = new Map();
+let _seq = 0;
+let worksCache = [];
+function rpc(method, payload) {
+  return new Promise((resolve, reject) => {
+    const id = 'r' + (++_seq);
+    _pending.set(id, { resolve, reject });
+    window.chrome.webview.postMessage(JSON.stringify({ id, method, payload: payload || {} }));
+    setTimeout(() => {
+      if (_pending.has(id)) { _pending.delete(id); reject(new Error(method + ' 超时')); }
+    }, method.startsWith('accounts.check') || method.startsWith('accounts.quota') || method === 'canvas.start' ? 300000 : 330000);
+  });
+}
+try {
+window.chrome.webview.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data) return;
+  if (data.type === 'module') { setModule(data.module); return; }
+  if (data.type === 'toast') { toast(data.message || ''); return; }
+  if (!data.id) return;
+  const entry = _pending.get(data.id);
+  if (!entry) return;
+  _pending.delete(data.id);
+  if (data.ok) entry.resolve(data.result); else entry.reject(new Error(data.error || '失败'));
+});
+} catch (bridgeErr) { if (window.__dbg) __dbg('bridge init failed: ' + bridgeErr.message); }
+function rpcStart(method, ids) { return rpc(method, { ids: ids || [] }).then(refreshIfAccounts).catch(err => toast(err.message)); }
+function refreshIfAccounts() { if (current === 'Accounts') loadAccounts(); }
+let toastTimer = null;
+function toast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 4200);
+}
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('已复制'), () => toast('复制失败'));
+}
+function esc(text) {
+  return String(text == null ? '' : text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ═══════════ module switch (pushed from host) ═══════════ */
+const MODULES = {
+  Dola: null,
+  Accounts: ['账号管理', '导入 · 检测 · 分组 · 额度 · Cookie 导出', loadAccounts],
+  ImageGeneration: ['图片生成', 'Seedream 5.0 Pro / Image2 · 比例分辨率', () => { fillAccountSelects(); onImgModel(); loadTaskHistory('image', imgHistoryPage); }],
+  VideoGeneration: ['视频生成', 'Seedance 2.0 Fast / 2.5 · 时长比例', () => { fillAccountSelects(); onVidModel(); loadTaskHistory('video', vidHistoryPage); }],
+  BatchGeneration: ['批量生成', '批量提交 · 队列执行 · 失败重试', () => { fillAccountSelects(); onBatKind(); loadBatchState(); }],
+  Canvas: ['无限画布', '无限画布 · 本地号池对接', autoStartCanvas],
+  Assets: ['资产库', '参考素材 · 图片视频音频', loadAssets],
+  Works: ['作品库', '成品作品 · 与 Dola 模块同步', loadWorks],
+  GenerationLogs: ['生成日志', '生成历史 · 持久化记录', loadLogs],
+  Proxy: ['代理管理', 'SOCKS5 / HTTP / HTTPS 代理', loadProxies],
+  AiModel: ['AI 模型配置', 'LLM / 生图接口配置', loadAi],
+  ApiServer: ['API 服务', '本地号池 REST API', loadApi]
+};
+let current = 'Accounts';
+function setModule(name) {
+  current = name;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const info = MODULES[name] || ['工作台', '', null];
+  if (name === 'Dola') { document.getElementById('modTitle').textContent = 'Dola 工作台'; document.getElementById('modSub').textContent = '内嵌浏览器 · 账号窗口 · 原创作区'; }
+  else {
+    document.getElementById('modTitle').textContent = info[0];
+    document.getElementById('modSub').textContent = info[1];
+    const page = document.getElementById('page-' + name);
+    if (page) page.classList.add('active');
+    document.getElementById('content').scrollTop = 0;
+    if (info[2]) try { info[2](); } catch (e) { console.error(e); }
+  }
+}
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data) return;
+  if (data.type === 'module') { setModule(data.module); return; }
+  // 天启式事件推送：任务状态/结果变化即时生效，无需等轮询
+  if (data.type === 'taskUpdate' && data.taskId) {
+    window.__taskUpdates = window.__taskUpdates || {};
+    window.__taskUpdates[data.taskId] = data;
+    if (typeof vidTask !== 'undefined' && vidTask && vidTask.id === data.taskId) {
+      if (data.status === 'completed') {
+        clearInterval(vidTimer);
+        finishVidRow(vidTask.row, 'completed', data.resultUrl);
+        document.getElementById('vidGo').disabled = false;
+        toast('视频生成完成（用时 ' + fmtDur(Date.now() - vidTask.started) + '）');
+      } else if (data.status === 'failed') {
+        clearInterval(vidTimer);
+        finishVidRow(vidTask.row, 'failed', data.error);
+        document.getElementById('vidGo').disabled = false;
+        toast('视频生成失败：' + data.error);
+      }
+    }
+  }
+});
+
+/* ═══════════ accounts ═══════════ */
+let _accounts = [];
+// 状态/分组筛选当前值（空 = 全部）；切换筛选或数据刷新后保持选择。
+let accStatusFilterValue = '';
+let accGroupFilterValue = '';
+let accLoginTypeFilterValue = '';
+function applyStatusFilter() {
+  accStatusFilterValue = document.getElementById('accStatusFilter').value;
+  loadAccounts();
+}
+function applyGroupFilter() {
+  accGroupFilterValue = document.getElementById('accGroupFilter').value;
+  loadAccounts();
+}
+function applyLoginTypeFilter() {
+  accLoginTypeFilterValue = document.getElementById('accLoginTypeFilter').value;
+  loadAccounts();
+}
+async function createGroup() {
+  const ids = checkedIds();
+  const name = prompt(ids.length ? '输入新分组名称（将把已勾选的 ' + ids.length + ' 个账号移入该分组）：' : '输入新分组名称：');
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed) { toast('分组名不能为空'); return; }
+  try {
+    const r = await rpc('accounts.createGroup', { name: trimmed, ids });
+    toast(ids.length ? '已创建分组「' + trimmed + '」并移入 ' + r.moved + ' 个账号' : '已创建分组「' + trimmed + '」');
+    loadAccounts();
+  } catch (e) { toast(e.message); }
+}
+function statusBadge(status) {
+  if (status === '已登录') return '<span class="badge b-ok">已登录</span>';
+  if (/登录失败|登录已失效|未登录/.test(status)) return '<span class="badge b-bad">' + esc(status) + '</span>';
+  if (/登录中|检测中|排队/.test(status)) return '<span class="badge b-run">' + esc(status) + '</span>';
+  return '<span class="badge b-idle">' + esc(status || '待处理') + '</span>';
+}
+let _proxyUrls = [];
+// 账号行的代理下拉：默认「本地直连」(空值)，选项来自代理池。
+function proxyCell(a) {
+  const options = ['<option value="">本地直连</option>'];
+  const seen = new Set();
+  for (const px of _proxyUrls) {
+    if (!px || !px.url || seen.has(px.url)) continue;
+    seen.add(px.url);
+    const state = px.ok === true ? ' · 正常' : px.ok === false ? ' · 失败' : ' · 未检测';
+    const label = (px.name || px.url) + state;
+    options.push('<option value="' + esc(px.url) + '"' + (a.proxy === px.url ? ' selected' : '') + ' title="' + esc(px.url) + '">' + esc(label) + '</option>');
+  }
+  if (a.proxy && !seen.has(a.proxy)) {
+    options.push('<option value="' + esc(a.proxy) + '" selected>' + esc(a.proxy + ' · 已从代理池移除') + '</option>');
+  }
+  return '<select class="proxySel" data-id="' + esc(a.id) + '" style="max-width:230px" title="选择该账号使用的代理，默认本地直连；重新打开账号窗口后生效">' + options.join('') + '</select>';
+}
+async function loadAccounts() {
+  try {
+    const data = await rpc('accounts.list');
+    _accounts = data.accounts || [];
+    const groups = data.groups || [];
+    try { _proxyUrls = (await rpc('proxy.list')).proxies || []; } catch (e) { _proxyUrls = []; }
+    const online = _accounts.filter(a => a.status.indexOf('已登录') >= 0).length;
+    const busy = _accounts.filter(a => a.generation === '制作中').length;
+    const withProxy = _accounts.filter(a => a.proxy).length;
+    document.getElementById('accStats').innerHTML = [
+      ['账号总数', _accounts.length], ['已登录', online], ['生成中', busy], ['已配代理', withProxy]
+    ].map(([k, v]) => '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>').join('');
+
+    // 状态筛选下拉：聚合各状态的账号数，选中后表格只显示该状态的账号
+    const statusCounts = new Map();
+    for (const a of _accounts) {
+      const key = a.status || '待处理';
+      statusCounts.set(key, (statusCounts.get(key) || 0) + 1);
+    }
+    const filterSel = document.getElementById('accStatusFilter');
+    if ([...statusCounts.keys()].indexOf(accStatusFilterValue) < 0) accStatusFilterValue = '';
+    filterSel.innerHTML = '<option value="">全部状态（' + _accounts.length + '）</option>' +
+      [...statusCounts.entries()].sort((x, y) => y[1] - x[1])
+        .map(([name, count]) => '<option value="' + esc(name) + '">' + esc(name) + '（' + count + '）</option>').join('');
+    filterSel.value = accStatusFilterValue;
+    // 分组筛选下拉：聚合各分组的账号数，选中后表格只显示该分组的账号
+    const groupCounts = new Map();
+    for (const a of _accounts) {
+      const key = a.group || '未分组';
+      groupCounts.set(key, (groupCounts.get(key) || 0) + 1);
+    }
+    const groupFilterSel = document.getElementById('accGroupFilter');
+    if ([...groupCounts.keys()].indexOf(accGroupFilterValue) < 0) accGroupFilterValue = '';
+    groupFilterSel.innerHTML = '<option value="">全部分组（' + _accounts.length + '）</option>' +
+      [...groupCounts.entries()].sort((x, y) => y[1] - x[1])
+        .map(([name, count]) => '<option value="' + esc(name) + '">' + esc(name) + '（' + count + '）</option>').join('');
+    groupFilterSel.value = accGroupFilterValue;
+    // 登录类型筛选下拉：谷歌账号 / Dola Cookie / FB Cookie / 手动登录
+    const loginTypeCounts = new Map();
+    for (const a of _accounts) {
+      const key = a.loginType || '手动登录';
+      loginTypeCounts.set(key, (loginTypeCounts.get(key) || 0) + 1);
+    }
+    const loginTypeSel = document.getElementById('accLoginTypeFilter');
+    if ([...loginTypeCounts.keys()].indexOf(accLoginTypeFilterValue) < 0) accLoginTypeFilterValue = '';
+    loginTypeSel.innerHTML = '<option value="">全部类型（' + _accounts.length + '）</option>' +
+      [...loginTypeCounts.entries()].sort((x, y) => y[1] - x[1])
+        .map(([name, count]) => '<option value="' + esc(name) + '">' + esc(name) + '（' + count + '）</option>').join('');
+    loginTypeSel.value = accLoginTypeFilterValue;
+    let visibleAccounts = accStatusFilterValue
+      ? _accounts.filter(a => (a.status || '待处理') === accStatusFilterValue)
+      : _accounts;
+    if (accGroupFilterValue) visibleAccounts = visibleAccounts.filter(a => (a.group || '未分组') === accGroupFilterValue);
+    if (accLoginTypeFilterValue) visibleAccounts = visibleAccounts.filter(a => (a.loginType || '手动登录') === accLoginTypeFilterValue);
+
+    const rows = visibleAccounts.map(a =>
+      '<tr><td><input type="checkbox" class="accChk" data-id="' + esc(a.id) + '"></td>' +
+      '<td>' + esc(a.group) + '</td><td><span id="accName_' + esc(a.id) + '">' + esc(a.name) + '</span>' +
+      '<button class="btn sm" style="margin-left:6px;padding:1px 6px" title="重命名账号" onclick="startRename(\'' + esc(a.id) + '\')">✎</button>' +
+      (a.email ? '<div class="hint" style="margin:0">' + esc(a.email) + '</div>' : '') + '</td>' +
+      '<td>' + statusBadge(a.status) + '</td>' +
+      '<td>' + (a.quota != null ? '<span class="ok-text">剩余 ' + a.quota + '</span>' : '—') + '</td>' +
+      '<td class="wrap">' + proxyCell(a) + '</td>' +
+      '<td>' + esc(a.checkedAt || '—') + '</td>' +
+      '<td><button class="btn sm" onclick="checkOne(\'' + esc(a.id) + '\')">检测</button> ' +
+      '<button class="btn sm" onclick="quotaOne(\'' + esc(a.id) + '\')">查额度</button> ' +
+      '<button class="btn sm" onclick="exportOne(\'' + esc(a.id) + '\')">导出</button> ' +
+      '<button class="btn sm" onclick="rpcStart(\'accounts.open\', [\'' + esc(a.id) + '\'])">打开</button></td></tr>'
+    ).join('');
+    document.getElementById('accRows').innerHTML = rows
+      || '<tr><td class="empty" colspan="8">' + (_accounts.length ? '没有符合当前筛选状态的账号' : '还没有账号 —— 用上方按钮导入') + '</td></tr>';
+
+    const groupSel = document.getElementById('batGroup');
+    const prev = groupSel.value;
+    groupSel.innerHTML = '<option value="">全部已登录账号</option>' + groups.map(g => '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>').join('');
+    if (prev) groupSel.value = prev;
+  } catch (err) { toast(err.message); }
+}
+function checkedIds() {
+  return Array.from(document.querySelectorAll('.accChk:checked')).map(el => el.dataset.id);
+}
+function toggleAllAccounts(el) {
+  document.querySelectorAll('.accChk').forEach(cb => { cb.checked = el.checked; });
+}
+// 账号行代理下拉：空值 = 本地直连（identity.Proxy 清空），重新打开账号窗口后生效。
+// 勾选了多个账号时改动某一行，会询问是否一并应用到所有勾选的账号。
+document.getElementById('accRows').addEventListener('change', async (ev) => {
+  const sel = ev.target.closest('select.proxySel');
+  if (!sel) return;
+  const id = sel.dataset.id, url = sel.value;
+  let targetIds = [id];
+  const checked = checkedIds();
+  if (checked.length > 1 && checked.indexOf(id) >= 0) {
+    if (confirm('已勾选 ' + checked.length + ' 个账号：是否将此代理一并应用到所有勾选的账号？\n（取消 = 仅修改当前账号）')) {
+      targetIds = checked;
+    }
+  }
+  warnSocks5Auth(url);
+  try {
+    await rpc('proxy.assign', { ids: targetIds, url });
+    toast(url ? '已为 ' + targetIds.length + ' 个账号设置代理（重新打开账号窗口后生效）'
+              : '已将 ' + targetIds.length + ' 个账号切换为本地直连（重新打开账号窗口后生效）');
+  } catch (e) { toast(e.message); }
+  loadAccounts();
+});
+function requireSelection() {
+  const ids = checkedIds();
+  if (!ids.length) { toast('先勾选要操作的账号'); return null; }
+  return ids;
+}
+async function checkOne(id) { toast('检测中…'); try { const r = await checkAccountSmart(id); toast('检测结果：' + r); loadAccounts(); } catch (e) { toast(e.message); } }
+// 智能检测：先走直连体检（vault Cookie 纯 HTTP，秒级、可高并发），不支持直连的账号自动回落浏览器探测。
+async function checkAccountSmart(id) {
+  try {
+    const r = await rpc('accounts.checkDirect', { id });
+    if (r.result !== '不支持直连') return r.result;
+  } catch (e) {}
+  const r2 = await rpc('accounts.check', { id });
+  return r2.result;
+}
+async function checkSelected() {
+  const ids = requireSelection(); if (!ids) return;
+  toast('检测中 ' + ids.length + ' 个账号（并发 ' + checkConcurrencyLimit(ids.length) + '）…');
+  await runCheckAll(ids);
+}
+// 读取「检测并发」设置（不设上限，写入 localStorage 持久化）。
+function checkConcurrencyLimit(total) {
+  const el = document.getElementById('checkConcurrency');
+  let n = parseInt(el && el.value, 10);
+  if (!Number.isFinite(n)) n = 3;
+  n = Math.max(1, n);
+  if (el) el.value = n;
+  try { localStorage.setItem('wb.checkConcurrency', String(n)); } catch (e) {}
+  return Math.max(1, Math.min(n, total || n));
+}
+try {
+  const savedConcurrency = parseInt(localStorage.getItem('wb.checkConcurrency'), 10);
+  const concurrencyEl = document.getElementById('checkConcurrency');
+  if (Number.isFinite(savedConcurrency) && savedConcurrency >= 1 && concurrencyEl) concurrencyEl.value = savedConcurrency;
+} catch (e) {}
+// 停止检测：置位后各 worker 不再领取新账号，进行中的检测完成后自然收尾。
+let _checkAborted = false, _checking = false;
+function stopCheck() {
+  if (!_checking || _checkAborted) return;
+  _checkAborted = true;
+  toast('正在停止检测，等待进行中的账号结束…');
+}
+async function runCheckAll(ids) {
+  const limit = checkConcurrencyLimit(ids.length);
+  _checkAborted = false; _checking = true;
+  const stopBtn = document.getElementById('btnStopCheck');
+  if (stopBtn) stopBtn.style.display = '';
+  let ok = 0, done = 0, next = 0;
+  const worker = async () => {
+    while (!_checkAborted && next < ids.length) {
+      const id = ids[next++];
+      let verdict = '';
+      try { verdict = await checkAccountSmart(id); } catch (e) { verdict = e.message; }
+      if (verdict === '已登录') ok++;
+      done++;
+      if (!_checkAborted) toast('检测进度 ' + done + '/' + ids.length + ' …');
+    }
+  };
+  await Promise.all(Array.from({ length: limit }, worker));
+  _checking = false;
+  if (stopBtn) stopBtn.style.display = 'none';
+  toast(_checkAborted ? '检测已停止：' + ok + '/' + ids.length + ' 已登录' : '检测完成：' + ok + '/' + ids.length + ' 已登录');
+  loadAccounts();
+}
+// 「创建浏览器并发」：读改存都走原生（%APPDATA%\XingchenDolaClient\browser-creation.json），重启后保留。
+function setBrowserCreationConcurrency() {
+  const el = document.getElementById('browserCreationConcurrency');
+  let n = parseInt(el && el.value, 10);
+  if (!Number.isFinite(n)) n = 1;
+  n = Math.max(1, Math.min(16, n));
+  if (el) el.value = n;
+  rpc('browser.setCreationConcurrency', { n }).catch(e => toast(e.message));
+}
+rpc('browser.getCreationConcurrency').then(r => {
+  const el = document.getElementById('browserCreationConcurrency');
+  if (el && Number.isFinite(r.n) && r.n >= 1) el.value = r.n;
+}).catch(() => {});
+async function quotaOne(id) {
+  toast('读取额度中…');
+  try { const r = await rpc('accounts.quota', { id }); toast(r.message || '未读到额度'); loadAccounts(); } catch (e) { toast(e.message); }
+}
+async function quotaSelected() {
+  const ids = requireSelection(); if (!ids) return;
+  for (let i = 0; i < ids.length; i++) {
+    toast('查额度 ' + (i + 1) + '/' + ids.length + ' …');
+    try { await rpc('accounts.quota', { id: ids[i] }); } catch (e) { toast(e.message); }
+  }
+  toast('额度查询完成'); loadAccounts();
+}
+async function exportCookieSelected() {
+  const ids = requireSelection(); if (!ids) return;
+  toast('请在弹出的窗口选择导出位置…');
+  try {
+    const r = await rpc('accounts.exportCookie', { ids });
+    if (r.cancelled) { toast('已取消导出'); return; }
+    if (r.error) { toast(r.error); return; }
+    toast('已导出 ' + r.count + ' 个账号的 Cookie（每行一个账号）→ ' + r.path);
+  } catch (e) { toast(e.message); }
+}
+async function exportOne(id) {
+  toast('请在弹出的窗口选择导出位置…');
+  try {
+    const r = await rpc('accounts.exportCookie', { ids: [id] });
+    if (r.cancelled) { toast('已取消导出'); return; }
+    if (r.error) { toast(r.error); return; }
+    toast('Cookie 已导出到：' + r.path);
+  } catch (e) { toast(e.message); }
+}
+async function openSelected() {
+  const ids = checkedIds();
+  if (!ids.length) { toast('先勾选要打开的账号'); return; }
+  let opened = 0;
+  for (const id of ids) {
+    try { await rpc('accounts.open', { id }); opened++; }
+    catch (e) { toast('打开失败：' + e.message); }
+  }
+  if (opened) toast('已打开 ' + opened + ' 个账号窗口');
+  loadAccounts();
+}
+function moveSelected() {
+  const ids = checkedIds(); if (!ids.length) { toast('先勾选账号'); return; }
+  rpc('accounts.list').then(data => {
+    const html = '<div class="card"><h3>移动到分组</h3><div class="row">' +
+      (data.groups || []).map(g => '<button class="btn sm" data-gid="' + esc(g.id) + '">' + esc(g.name) + '</button>').join('') + '</div></div>';
+    toast('在下方选择目标分组');
+    const bar = document.querySelector('#page-Accounts .bar');
+    let picker = document.getElementById('groupPicker');
+    if (picker) picker.remove();
+    const div = document.createElement('div');
+    div.id = 'groupPicker'; div.className = 'card'; div.innerHTML = html;
+    bar.parentNode.insertBefore(div, bar);
+    div.querySelectorAll('button').forEach(btn => {
+      btn.onclick = () => {
+        rpc('accounts.move', { ids, groupId: btn.dataset.gid }).then(() => { div.remove(); loadAccounts(); toast('已移动'); }).catch(e => toast(e.message));
+      };
+    });
+  });
+}
+async function deleteSelected() {
+  const ids = requireSelection(); if (!ids) return;
+  if (!confirm('确定删除所选 ' + ids.length + ' 个账号？浏览器会话将被移除。')) return;
+  // 并发删除（同时最多 3 个账号，各自独立浏览器目录互不影响）
+  const limit = Math.min(3, ids.length);
+  let done = 0, failed = 0, next = 0;
+  const worker = async () => {
+    while (next < ids.length) {
+      const id = ids[next++];
+      const account = _accounts.find(a => a.id === id);
+      const name = (account && account.name) || id;
+      try { await rpc('accounts.deleteOne', { id }); }
+      catch (e) { failed++; toast('删除失败：' + name + '（' + e.message + '）'); }
+      done++;
+      toast('删除进度 ' + done + '/' + ids.length + '…');
+    }
+  };
+  await Promise.all(Array.from({ length: limit }, worker));
+  toast('删除完成：成功 ' + (ids.length - failed) + ' 个' + (failed ? '，失败 ' + failed + ' 个' : ''));
+  loadAccounts();
+}
+async function assignProxySelected() {
+  const ids = requireSelection(); if (!ids) return;
+  try {
+    const data = await rpc('proxy.list');
+    const proxies = data.proxies || [];
+    const old = document.getElementById('groupPicker');
+    if (old) old.remove();
+    const names = ids.map(id => { const a = _accounts.find(x => x.id === id); return a ? a.name : ''; }).filter(Boolean).slice(0, 5);
+    const options = ['<button class="btn sm" data-url="">本地直连（清除代理）</button>'].concat(
+      proxies.map(px => '<button class="btn sm" data-url="' + esc(px.url) + '" title="' + esc(px.url) + '">' +
+        esc((px.name || px.url) + (px.ok === true ? ' · 正常' : px.ok === false ? ' · 失败' : ' · 未检测')) + '</button>'));
+    const div = document.createElement('div');
+    div.id = 'groupPicker'; div.className = 'card';
+    div.innerHTML = '<h3>为所选 ' + ids.length + ' 个账号选择代理（重新打开账号窗口后生效）</h3>' +
+      (names.length ? '<div class="hint" style="margin:0 0 6px">' + esc(names.join('、')) + (ids.length > names.length ? ' 等 ' + ids.length + ' 个账号' : '') + '</div>' : '') +
+      '<div class="row">' + options.join('') + '</div>' +
+      (proxies.length ? '' : '<div class="hint">代理池为空：可先在「代理管理」页导入代理，再为账号分配</div>');
+    const page = document.getElementById('page-Accounts');
+    page.insertBefore(div, page.querySelector('.bar'));
+    div.querySelectorAll('button[data-url]').forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          const r = await rpc('proxy.assign', { ids, url: btn.dataset.url });
+          toast(btn.dataset.url ? '已为 ' + r.applied + ' 个账号设置代理' : '已将 ' + r.applied + ' 个账号切换为本地直连');
+          div.remove(); loadAccounts();
+        } catch (e) { toast(e.message); }
+      };
+    });
+  } catch (e) { toast(e.message); }
+}
+function startRename(id) {
+  const span = document.getElementById('accName_' + id);
+  if (!span || span.querySelector('input')) return;
+  const current = span.textContent;
+  span.innerHTML = '<input type="text" value="' + esc(current) + '" style="width:130px;padding:2px 6px"> ' +
+    '<button class="btn sm primary" title="保存">✓</button><button class="btn sm" title="取消">✕</button>';
+  const input = span.querySelector('input');
+  const [okBtn, cancelBtn] = span.querySelectorAll('button');
+  input.focus(); input.select();
+  const save = async () => {
+    const trimmed = input.value.trim();
+    if (!trimmed) { toast('账号名不能为空'); return; }
+    try {
+      await rpc('accounts.rename', { id, name: trimmed });
+      toast('已重命名为「' + trimmed + '」');
+      loadAccounts();
+    } catch (e) { toast(e.message); loadAccounts(); }
+  };
+  okBtn.onclick = save;
+  cancelBtn.onclick = () => loadAccounts();
+  input.onkeydown = (ev) => {
+    if (ev.key === 'Enter') save();
+    if (ev.key === 'Escape') loadAccounts();
+  };
+}
+function manageGroups() {
+  const checked = checkedIds();
+  rpc('accounts.list').then(data => {
+    const groups = data.groups || [];
+    const counts = {};
+    for (const a of (data.accounts || [])) {
+      const g = a.group || '未分组';
+      counts[g] = (counts[g] || 0) + 1;
+    }
+    const old = document.getElementById('groupPicker');
+    if (old) old.remove();
+    const div = document.createElement('div');
+    div.id = 'groupPicker'; div.className = 'card';
+    div.innerHTML = '<h3>管理分组</h3>' +
+      '<div class="row" style="align-items:center"><input type="text" id="newGroupName" placeholder="新分组名称" style="flex:1;min-width:140px">' +
+      '<button class="btn sm primary" id="createGroupBtn">创建分组</button></div>' +
+      '<div class="hint" style="margin:6px 0">已有分组（勾选后可批量删除，成员将移入默认分组）：</div>' +
+      '<div class="row">' + (groups.length ? groups.map(g =>
+        '<label style="display:inline-flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="grpChk" data-id="' + esc(g.id) + '">' +
+        esc(g.name) + '（' + (counts[g.name] || 0) + '）</label>').join('') : '<span class="hint">暂无分组</span>') + '</div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn sm danger" id="deleteGroupsBtn">删除所选分组</button>' +
+      '<button class="btn sm" id="closeManageGroups">收起</button></div>';
+    const page = document.getElementById('page-Accounts');
+    page.insertBefore(div, page.querySelector('.bar'));
+    div.querySelector('#createGroupBtn').onclick = async () => {
+      const name = div.querySelector('#newGroupName').value.trim();
+      if (!name) { toast('分组名不能为空'); return; }
+      try {
+        await rpc('accounts.createGroup', { name, ids: [] });
+        toast('已创建分组「' + name + '」');
+        div.remove(); loadAccounts(); manageGroups();
+      } catch (e) { toast(e.message); }
+    };
+    div.querySelector('#deleteGroupsBtn').onclick = async () => {
+      const gids = Array.from(div.querySelectorAll('.grpChk:checked')).map(el => el.dataset.id);
+      if (!gids.length) { toast('先勾选要删除的分组'); return; }
+      if (!confirm('确定删除所选 ' + gids.length + ' 个分组？其成员将移入默认分组。')) return;
+      try {
+        await rpc('accounts.deleteGroups', { ids: gids });
+        toast('已删除 ' + gids.length + ' 个分组');
+        div.remove(); loadAccounts();
+      } catch (e) { toast(e.message); }
+    };
+    div.querySelector('#closeManageGroups').onclick = () => div.remove();
+  });
+}
+async function closeAllWindows() {
+  if (!confirm('关闭所有已打开的账号窗口？（不影响账号与登录数据）')) return;
+  try { await rpc('accounts.closeAllWindows'); toast('已关闭所有账号窗口'); } catch (e) { toast(e.message); }
+}
+
+/* ═══════════ account select (generation pages) ═══════════ */
+async function fillAccountSelects() {
+  // 每次进入生成页都拉最新账号列表，避免下拉与账号管理对不上
+  try {
+    const data = await rpc('accounts.list');
+    _accounts = data.accounts || [];
+  } catch (e) { }
+  const online = _accounts.filter(a => a.status.indexOf('已登录') >= 0);
+  const batAcc = document.getElementById('batAccount');
+  if (batAcc) {
+    const prevBat = batAcc.value;
+    batAcc.innerHTML = '<option value="">按范围轮转</option>' +
+      online.map(a => '<option value="' + esc(a.id) + '">' + esc(a.name) + '</option>').join('');
+    if (prevBat && [...batAcc.options].some(op => op.value === prevBat)) batAcc.value = prevBat;
+  }
+  const batGrp = document.getElementById('batGroup');
+  if (batGrp) {
+    try {
+      const groups = await rpc('groups.list');
+      const prevG = batGrp.value;
+      batGrp.innerHTML = '<option value="">全部已登录账号</option>' +
+        (groups.groups || []).map(g => '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>').join('');
+      if (prevG && [...batGrp.options].some(op => op.value === prevG)) batGrp.value = prevG;
+    } catch (e) {}
+  }
+  for (const selId of ['imgAccount', 'vidAccount']) {
+    const sel = document.getElementById(selId);
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">自动轮转（全部已登录账号）</option>' +
+      online.map(a => '<option value="' + esc(a.id) + '">' + esc(a.name) + (a.proxy ? ' [代理]' : '') + (a.loginType && a.loginType !== '谷歌账号' ? ' [' + esc(a.loginType) + ']' : '') + '</option>').join('');
+    if (!online.length) sel.innerHTML += '<option value="">（暂无已登录账号）</option>';
+    if (prev && [...sel.options].some(op => op.value === prev)) sel.value = prev;
+  }
+}
+function onVidModel() {
+  // 天启 GENERATION_RULES：2.0 Fast 5/10/15 秒（1/2/3 额度），2.5 仅 30 秒（2 额度），1.0 仅 5/10 秒（1 额度）
+  const v = document.getElementById('vidModel').value;
+  const dur = document.getElementById('vidDuration');
+  if (v === 'seedance-2.5') dur.innerHTML = '<option value="30">30 秒 · 2 额度</option>';
+  else dur.innerHTML = '<option value="5">5 秒 · 1 额度</option><option value="10">10 秒 · 2 额度</option><option value="15">15 秒 · 3 额度</option>';
+}
+function onImgModel() {
+  // 参数按模型对应：Seedream 5.0 Pro 的官方界面只有比例（无分辨率控件），分辨率写进提示词做软约束；
+  // Image2 走外部生图 API：无 Dola 账号与风格概念，比例+分辨率映射为输出尺寸。
+  const isImage2 = document.getElementById('imgModel').value === 'image2';
+  document.getElementById('imgResField').style.display = isImage2 ? '' : 'none';
+  document.getElementById('imgRes').disabled = !isImage2;
+  document.getElementById('imgStyleField').style.display = isImage2 ? 'none' : '';
+  document.getElementById('imgAccountField').style.display = isImage2 ? 'none' : '';
+  document.getElementById('imgStyle').disabled = isImage2;
+  document.getElementById('imgAccount').disabled = isImage2;
+}
+async function openGenAccount(selId) {
+  const id = document.getElementById(selId).value;
+  if (!id) { toast('当前为「自动轮转」，请先选择具体账号'); return; }
+  try { await rpc('accounts.open', { id }); toast('已打开账号窗口'); } catch (e) { toast(e.message); }
+}
+async function openGenAccountId(id) {
+  if (!id) { toast('该记录没有关联账号'); return; }
+  try { await rpc('accounts.open', { id }); toast('已打开账号窗口'); } catch (e) { toast(e.message); }
+}
+
+/* ═══════════ video generation ═══════════ */
+let vidTask = null, vidTimer = null;
+// 图片/视频页历史记录：持久化存储分页展示（每页 20 条），重启不丢
+let imgHistoryPage = 1, vidHistoryPage = 1;
+async function loadTaskHistory(type, page) {
+  try {
+    const r = await rpc('logs.page', { type, page });
+    const tbody = document.getElementById(type === 'image' ? 'imgRows' : 'vidRows');
+    tbody.innerHTML = (r.items || []).map(e => {
+      const badge = e.status === 'completed' ? 'b-ok' : e.status === 'failed' ? 'b-bad' : 'b-run';
+      const statusText = e.status === 'completed' ? '完成' : e.status === 'failed' ? '失败' : e.status;
+      const openBtn = e.accountId
+        ? '<button class="btn sm" onclick="openGenAccountId(\'' + esc(e.accountId) + '\')" title="打开该账号的浏览器窗口">打开</button>'
+        : '—';
+      return '<tr><td>' + esc(e.time) + '</td><td>' + esc(e.model) + '</td>' +
+        '<td><span class="badge ' + badge + '">' + esc(statusText) + '</span></td>' +
+        '<td>' + esc(e.accountName || '—') + '</td>' +
+        '<td class="wrap">' + resultCellHtml(e.resultUrl, e.resultPath, e.error) + '</td>' +
+        '<td>' + openBtn + '</td></tr>';
+    }).join('') || '<tr><td class="empty" colspan="6">暂无任务</td></tr>';
+    const pager = document.getElementById(type === 'image' ? 'imgPager' : 'vidPager');
+    pager.innerHTML = '<span class="hint" style="margin:0">共 ' + r.total + ' 条 · 第 ' + r.page + '/' + r.totalPages + ' 页（每页 20 条）</span>' +
+      '<button class="btn sm" ' + (r.page <= 1 ? 'disabled' : '') + ' onclick="pageTaskHistory(\'' + type + '\', -1)">上一页</button>' +
+      '<button class="btn sm" ' + (r.page >= r.totalPages ? 'disabled' : '') + ' onclick="pageTaskHistory(\'' + type + '\', 1)">下一页</button>';
+    return r;
+  } catch (e) { }
+}
+function pageTaskHistory(type, delta) {
+  if (type === 'image') loadTaskHistory('image', Math.max(1, imgHistoryPage + delta)).then(r => { if (r) imgHistoryPage = r.page; });
+  else loadTaskHistory('video', Math.max(1, vidHistoryPage + delta)).then(r => { if (r) vidHistoryPage = r.page; });
+}
+let _assetAliasMap = null;
+async function getAssetAliasMap() {
+  if (_assetAliasMap) return _assetAliasMap;
+  const map = {};
+  try {
+    const data = await rpc('assets.list');
+    for (const f of (data.files || [])) {
+      if (f.alias) map['@' + f.alias] = f.path;
+    }
+  } catch (e) { }
+  _assetAliasMap = map;
+  return map;
+}
+let videoSubmitting = false;
+async function submitVideo() {
+  const prompt = document.getElementById('vidPrompt').value.trim();
+  if (!prompt) { toast('请先输入提示词'); return; }
+  // 仅在“提交动作”进行中防重（不影响生成期间继续提交新任务）
+  if (videoSubmitting) { toast('上一条还在提交中…'); return; }
+  videoSubmitting = true;
+  try { await submitVideoInner(prompt); } finally { videoSubmitting = false; }
+}
+async function submitVideoInner(prompt) {
+  const model = document.getElementById('vidModel').value;
+  const duration = parseInt(document.getElementById('vidDuration').value, 10);
+  const ratio = document.getElementById('vidRatio').value;
+  const accountId = document.getElementById('vidAccount').value;
+  const row = addTaskRow('vidRows', model + ' ' + duration + 's ' + ratio, '排队中', '—', accountId);
+  // 天启资产库管道：@别名 引用的本地资产提交时自动上传为参考素材
+  let referencePaths = [];
+  const refs = prompt.match(/@[^\s@]+/g) || [];
+  if (refs.length) {
+    const map = await getAssetAliasMap();
+    for (const token of refs) {
+      const path = map[token];
+      if (path) referencePaths.push(path);
+    }
+    if (referencePaths.length) toast('已附带 ' + referencePaths.length + ' 个参考素材（@引用）');
+  }
+  document.getElementById('vidGo').disabled = true;
+  const started = Date.now();
+  vidTask = { id: null, row, started, entry: { time: nowTime(), model: model + '/' + duration + 's', status: 'running' } };
+  try {
+    const r = await rpc('gen.video', { model, prompt, duration, ratio, accountId, referencePaths });
+    vidTask.id = r.taskId;
+    row.children[3].textContent = r.accountName || r.account || '—';
+    if (r.account) {
+      row.children[5].innerHTML = '<button class="btn sm" onclick="openGenAccountId(\'' + esc(r.account) + '\')">打开</button>';
+    }
+    row.children[2].innerHTML = '<span class="badge b-run">生成中</span>';
+    pollVideo();
+  } catch (e) {
+    finishVidRow(row, 'failed', e.message);
+    document.getElementById('vidGo').disabled = false;
+  }
+}
+function pollVideo() {
+  clearInterval(vidTimer);
+  vidTimer = setInterval(async () => {
+    if (!vidTask || !vidTask.id) { clearInterval(vidTimer); return; }
+    try {
+      const st = await rpc('gen.status', { taskId: vidTask.id });
+      const statusTextMap = { pending: '排队中', waiting: '等待中', running: '生成中' };
+      if (statusTextMap[st.status]) setTaskRowStatus(vidTask.row, statusTextMap[st.status]);
+      if (st.status === 'completed') {
+        clearInterval(vidTimer);
+        finishVidRow(vidTask.row, 'completed', st.resultUrl);
+        document.getElementById('vidGo').disabled = false;
+        toast('视频生成完成（用时 ' + fmtDur(Date.now() - vidTask.started) + '）');
+      } else if (st.status === 'failed') {
+        clearInterval(vidTimer);
+        finishVidRow(vidTask.row, 'failed', st.error);
+        document.getElementById('vidGo').disabled = false;
+        toast('视频生成失败：' + st.error);
+      } else if (Date.now() - vidTask.started > 12 * 60000) {
+        clearInterval(vidTimer);
+        finishVidRow(vidTask.row, 'failed', '超时');
+        document.getElementById('vidGo').disabled = false;
+      }
+    } catch (e) { clearInterval(vidTimer); finishVidRow(vidTask.row, 'failed', e.message); document.getElementById('vidGo').disabled = false; }
+  }, 3000);
+}
+async function pollTask(taskId, timeoutMs, row) {
+  const deadline = Date.now() + (timeoutMs || 240000);
+  while (Date.now() < deadline) {
+    const pushed = (window.__taskUpdates || {})[taskId];
+    if (pushed) return { status: pushed.status, error: pushed.error, resultUrl: pushed.resultUrl };
+    await new Promise(r => setTimeout(r, 1500));
+    const st = await rpc('gen.status', { taskId });
+    const statusTextMap = { pending: '排队中', waiting: '等待中', running: '生成中' };
+    if (row && statusTextMap[st.status]) setTaskRowStatus(row, statusTextMap[st.status]);
+    if (st.status === 'completed' || st.status === 'failed') return st;
+  }
+  return { status: 'failed', error: '超时' };
+}
+function addTaskRow(tbodyId, model, status, account, accountId) {
+  const tbody = document.getElementById(tbodyId);
+  const empty = tbody.querySelector('.empty'); if (empty) empty.parentNode.remove();
+  const tr = document.createElement('tr');
+  const openBtn = accountId
+    ? '<button class="btn sm" onclick="openGenAccountId(\'' + esc(accountId) + '\')">打开</button>'
+    : '—';
+  tr.innerHTML = '<td>' + nowTime() + '</td><td>' + esc(model) + '</td><td><span class="badge b-run">' + esc(status) + '</span></td><td>' + esc(account) + '</td><td class="wrap">—</td><td>' + openBtn + '</td>';
+  tbody.insertBefore(tr, tbody.firstChild);
+  return tr;
+}
+function setTaskRowStatus(row, statusText, cls) {
+  if (row && row.children[2]) row.children[2].innerHTML = '<span class="badge ' + (cls || 'b-run') + '">' + esc(statusText) + '</span>';
+}
+function finishVidRow(row, status, detail) {
+  const cls = status === 'completed' ? 'b-ok' : 'b-bad';
+  row.children[2].innerHTML = '<span class="badge ' + cls + '">' + (status === 'completed' ? '完成' : '失败') + '</span>';
+  const isUrl = /^https?:\/\//.test(detail || '');
+  row.children[4].innerHTML = status === 'completed' && isUrl ? resultCellHtml(detail, '', '') : esc(detail || '—');
+  loadTaskHistory('video', vidHistoryPage);
+}
+
+/* ═══════════ image generation ═══════════ */
+let imageSubmitting = false;
+async function submitImage() {
+  const prompt = document.getElementById('imgPrompt').value.trim();
+  if (!prompt) { toast('请先输入提示词'); return; }
+  // 仅在“提交动作”进行中防重（不影响生成期间继续提交新任务）
+  if (imageSubmitting) { toast('上一条还在提交中…'); return; }
+  imageSubmitting = true;
+  try { await submitImageInner(prompt); } finally { imageSubmitting = false; }
+}
+async function submitImageInner(prompt) {
+  const model = document.getElementById('imgModel').value;
+  const ratio = document.getElementById('imgRatio').value;
+  const style = document.getElementById('imgStyle').value.trim();
+  const accountId = document.getElementById('imgAccount').value;
+  const accountName = accountId ? ((_accounts.find(a => a.id === accountId) || {}).name || '') : '';
+  const row = addTaskRow('imgRows', model + ' ' + ratio, '生成中', accountId ? (accountName || '—') : '外部 API', accountId);
+  try {
+    if (model === 'image2') {
+      const size = sizeFor(document.getElementById('imgRes').value, ratio);
+      const r = await rpc('gen.image2', { prompt, size });
+      row.children[2].innerHTML = '<span class="badge b-ok">完成</span>';
+      row.children[3].textContent = '外部 API';
+      row.children[4].innerHTML = '<span class="ok-text">' + esc(r.path) + '</span>';
+      toast('图片已生成 → ' + r.path);
+      loadTaskHistory('image', imgHistoryPage);
+    } else {
+      // Seedream 官方界面只有比例：比例写入提示词后缀约束，分辨率不作参数
+      const effectivePrompt = prompt + '\n\n[图片生成参数]\n画幅比例：' + ratio + '\n请严格按以上参数生成图片。';
+      const imageRefs = [];
+      for (const token of (prompt.match(/@[^\s@]+/g) || [])) {
+        const aliasMap = await getAssetAliasMap();
+        const refPath = aliasMap[token];
+        if (refPath) imageRefs.push(refPath);
+      }
+      if (imageRefs.length) toast('已附带 ' + imageRefs.length + ' 个参考图（@引用，实验性）');
+      const r = await rpc('gen.imageSeedream', { model, prompt: effectivePrompt, ratio, style, accountId, referencePaths: imageRefs });
+      row.children[3].textContent = r.accountName || r.account || '—';
+      if (r.account) {
+        row.children[5].innerHTML = '<button class="btn sm" onclick="openGenAccountId(\'' + esc(r.account) + '\')">打开</button>';
+      }
+      const result = await pollTask(r.taskId, 420000, row);
+      if (result.status === 'completed' && result.resultUrl) {
+        // 结果云端 URL 自动下载到本地，记录里看得到文件
+        let savedPath = '';
+        try { const dl = await rpc('logs.downloadResult', { url: result.resultUrl }); savedPath = dl.path || ''; } catch (e) { }
+        row.children[2].innerHTML = '<span class="badge b-ok">完成</span>';
+        row.children[4].innerHTML = resultCellHtml(result.resultUrl, savedPath, '');
+        toast(savedPath ? '图片已保存 → ' + savedPath : '图片生成完成');
+      } else if (result.status === 'completed') {
+        row.children[2].innerHTML = '<span class="badge b-bad">失败</span>';
+        row.children[4].textContent = '未取到结果链接';
+        toast('图片生成失败：未取到结果链接');
+      } else {
+        row.children[2].innerHTML = '<span class="badge b-bad">失败</span>';
+        row.children[4].textContent = result.error || '未知错误';
+        toast('图片生成失败：' + (result.error || '未知错误'));
+      }
+      loadTaskHistory('image', imgHistoryPage);
+    }
+  } catch (e) {
+    row.children[2].innerHTML = '<span class="badge b-bad">失败</span>';
+    row.children[4].textContent = e.message;
+    toast('图片生成失败：' + e.message);
+  }
+}
+function sizeFor(resolution, ratio) {
+  const base = resolution === '4K' ? 4096 : resolution === '1K' ? 1024 : 2048;
+  const map = { '16:9': [1, 9 / 16], '9:16': [9 / 16, 1], '4:3': [1, 3 / 4], '3:4': [3 / 4, 1], '21:9': [1, 9 / 21], '1:1': [1, 1] };
+  const [w, h] = map[ratio] || [1, 1];
+  return Math.round(base * w) + 'x' + Math.round(base * h);
+}
+
+/* ═══════════ batch ═══════════ */
+function onBatKind() {
+  const kind = document.getElementById('batKind').value;
+  const model = document.getElementById('batModel');
+  const isImage = kind === 'image';
+  // 参数按类型分离：图片无时长、有风格/分辨率；视频无分辨率/风格
+  document.getElementById('batDurationField').style.display = isImage ? 'none' : '';
+  document.getElementById('batResField').style.display = isImage ? '' : 'none';
+  document.getElementById('batStyleField').style.display = isImage ? '' : 'none';
+  if (isImage) {
+    model.innerHTML = '<option value="dola-image-5.0-pro">Dola Seedream 5.0 Pro</option><option value="dola-image-4.5">Dola Seedream 4.5</option><option value="image2">Image2（外部 API）</option>';
+    model.value = 'dola-image-5.0-pro';
+  } else {
+    model.innerHTML = '<option value="dola-video-2.0-fast">Dola Seedance 2.0 Fast</option><option value="dola-video-2.5">Dola Seedance 2.5</option><option value="dola-video-1.0">Dola Seedance 1.0</option>';
+    model.selectedIndex = 0;
+  }
+  onBatModel();
+}
+function onBatModel() {
+  const kind = document.getElementById('batKind').value;
+  const is25 = kind === 'video' && document.getElementById('batModel').value === 'dola-video-2.5';
+  const dur = document.getElementById('batDuration');
+  // 与视频生成页一致：2.0 Fast 5/10/15 秒（1/2/3 额度），2.5 仅 30 秒（2 额度）
+  dur.innerHTML = is25
+    ? '<option value="30">30 秒 · 2 额度</option>'
+    : '<option value="5">5 秒 · 1 额度</option><option value="10">10 秒 · 2 额度</option><option value="15">15 秒 · 3 额度</option>';
+}
+let batchTimer = null;
+let _batchTableRows = null;   // 表格导入的逐行参数
+let stWasRunning = false;
+async function startBatch() {
+  const payload = {
+    kind: document.getElementById('batKind').value,
+    model: document.getElementById('batModel').value,
+    duration: parseInt(document.getElementById('batDuration').value, 10),
+    ratio: document.getElementById('batRatio').value,
+    resolution: document.getElementById('batRes').value,
+    style: document.getElementById('batStyle').value,
+    groupId: document.getElementById('batGroup').value,
+    accountId: document.getElementById('batAccount').value
+  };
+  if (_batchTableRows && _batchTableRows.length) {
+    payload.rows = _batchTableRows;
+  } else {
+    const aliasMap = await getAssetAliasMap();
+    const lines = document.getElementById('batPrompts').value.split('\n')
+      .map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+    if (!lines.length) { toast('请先输入至少一行提示词，或导入表格'); return; }
+    payload.rows = lines.map(line => {
+      const refs = (line.match(/@[^\s@，,]+/g) || []).map(tok => aliasMap[tok]).filter(Boolean);
+      return { prompt: line, references: refs.join(',') };
+    });
+  }
+  try {
+    const r = await rpc('batch.start', payload);
+    toast(stWasRunning ? '已加入队列（当前批次结束后执行）：' + r.count + ' 个任务' : '批量开始：' + r.count + ' 个任务');
+    document.getElementById('batStop').disabled = false;
+    clearInterval(batchTimer);
+    batchTimer = setInterval(loadBatchState, 2500);
+    loadBatchState();
+    if (_batchTableRows) { _batchTableRows = null; document.getElementById('batImportHint').textContent = '已提交导入的表格批次'; }
+  } catch (e) { toast(e.message); }
+}
+async function loadBatchState() {
+  let st;
+  try { st = await rpc('batch.state'); } catch (e) { return; }
+  stWasRunning = st.running;
+  document.getElementById('batStop').disabled = !st.running;
+  const doneCount = st.rows.filter(r => r.status === 'completed').length;
+  document.getElementById('batProgress').textContent = (st.running
+    ? (st.current || '运行中')
+    : (st.current || '就绪')) + (st.queued ? ' · 排队批次 ' + st.queued : '') + ' · 完成 ' + doneCount + '/' + st.total;
+  if (!st.total && !st.running) {
+    document.getElementById('batRows').innerHTML = '<tr><td class="empty" colspan="5">尚未开始</td></tr>';
+    return;
+  }
+  document.getElementById('batRows').innerHTML = st.rows.map(r =>
+    '<tr><td class="wrap">' + esc(r.text) + '</td><td><span class="badge ' +
+    (r.status === 'completed' ? 'b-ok' : r.status === 'failed' ? 'b-bad' : r.status === 'running' ? 'b-run' : 'b-idle') +
+    '">' + esc(r.status) + '</span></td><td>' + esc(r.account || '') + '</td>' +
+    '<td class="wrap">' + resultCellHtml(r.url, r.localPath, r.error) + '</td>' +
+    '<td>' + (r.identityId ? '<button class="btn sm" onclick="openGenAccountId(\'' + esc(r.identityId) + '\')" title="打开该账号的浏览器窗口">打开浏览器</button>' : '—') + '</td></tr>').join('');
+  if (!st.running) clearInterval(batchTimer);
+}
+function resultCellHtml(url, localPath, error) {
+  const link = url || localPath || '';
+  if (link) {
+    const isImg = /\.(png|jpe?g|webp)(\?|$)/i.test(link) || link.indexOf('ibyteimg') >= 0;
+    const thumb = isImg ? '<img src="' + esc(link) + '" loading="lazy" style="max-width:76px;max-height:46px;display:block;margin-bottom:3px;border-radius:4px;cursor:pointer" onclick="window.open(this.src)">' : '';
+    return thumb + '<a href="' + esc(link) + '" target="_blank" class="ok-text">查看</a> <button class="btn sm" data-copy="' + esc(link) + '" onclick="copyText(this.dataset.copy)">复制</button>';
+  }
+  if (error) return '<span class="bad-text" title="' + esc(error) + '">' + esc(truncate(error, 60)) + '</span>';
+  return '—';
+}
+function copyText(t) {
+  const done = () => toast('已复制');
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
+  else fallbackCopy(t, done);
+}
+function fallbackCopy(t, done) {
+  const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta);
+  ta.select(); try { document.execCommand('copy'); done(); } catch (e) {} ta.remove();
+}
+async function importBatchTable(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  try {
+    const r = await rpc('batch.importTable', { dataBase64: btoa(binary), fileName: file.name });
+    _batchTableRows = r.rows;
+    document.getElementById('batImportHint').textContent = '已导入 ' + r.count + ' 行（点 开始批量生成 按表格逐行执行）';
+    toast('表格导入成功：' + r.count + ' 个任务');
+  } catch (e) { toast('导入失败：' + e.message); }
+  input.value = '';
+}
+async function downloadBatchTemplate() {
+  try {
+    const r = await rpc('batch.tableTemplate');
+    saveBase64File(r.base64, r.fileName);
+  } catch (e) { toast(e.message); }
+}
+function saveBase64File(base64, name) {
+  const bytes = atob(base64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+async function downloadBatchGuide() {
+  const lines = [
+    '批量生成 · 表格批量导入参数填写说明',
+    '',
+    '1. 先点【下载表格模板】，在 批量任务 表中填写：每行一个任务，提示词列必填。',
+    '2. 类型：视频 / 图片；留空则使用批量生成页面上选择的类型。',
+    '3. 模型：视频 dola-video-2.0-fast / dola-video-2.5 / dola-video-1.0；图片 dola-image-5.0-pro / dola-image-4.5 / image2；留空用页面默认。',
+    '4. 时长(秒)：仅视频有效（2.0-fast: 5/10/15；2.5: 5/10/30；1.0: 5/10），其他数值自动就近吸附。',
+    '5. 比例：9:16 / 16:9 / 1:1 / 3:4 / 4:3 / 21:9。分辨率：仅图片外部模型 image2 有效（1K/2K/4K）。',
+    '6. 数量：仅图片有效，一次生成几张（1-8，留空=1；Dola 模型并发生成并全部返回）。',
+    '7. 风格（图片）：动漫/人像摄影/风景/3D渲染/赛博朋克/油画/水彩画/平面插画/儿童绘画/像素风格/彩铅画/水墨画/油墨印刷。',
+    '8. 账号：填账号显示名或ID则固定该账号；留空按页面选择的账号范围轮转。',
+    '9. 参考素材：填素材库 @别名（英文逗号分隔，如 @产品图,@logo），生成时自动作为参考素材上传。',
+    '10. 保存后点【导入表格】选择该文件 → 点【开始批量生成】。',
+    '11. 运行中也可以继续提交新批次（自动排队依次执行）；每行完成后在结果列点 查看/复制。',
+  ];
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = '批量生成表格填写说明.txt'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+/* ═══════════ canvas ═══════════ */
+let cvAutoStarted = false;
+function autoStartCanvas() {
+  loadCanvas();
+  // 默认自动启动画布：进入模块即拉起，无需手动点击
+  if (!cvAutoStarted) {
+    cvAutoStarted = true;
+    setTimeout(() => {
+      rpc('canvas.get').then(st => {
+        if (!st.running && !document.getElementById('cvStart').disabled) startCanvas();
+      }).catch(() => {});
+    }, 300);
+  }
+}
+async function loadCanvas() {
+  try {
+    const st = await rpc('canvas.get');
+    if (st.root && !document.getElementById('cvRoot').value) document.getElementById('cvRoot').value = st.root;
+    setCanvasStatus(st);
+  } catch (e) {}
+}
+function setCanvasStatus(st) {
+  document.getElementById('cvStatus').innerHTML = st.running
+    ? '<span class="ok-text">运行中 · ' + esc(st.url) + '</span>'
+    : (st.error ? '<span class="bad-text">' + esc(st.error) + '</span>' : '未启动');
+  document.getElementById('cvOpen').disabled = !st.running;
+  document.getElementById('cvStart').disabled = st.running;
+  document.getElementById('cvStop').style.display = st.running ? '' : 'none';
+  const frame = document.getElementById('cvFrame');
+  if (st.running) {
+    canvasOrigin = new URL(st.url).origin;
+    if (!frame.src) frame.src = st.url + '/canvas?embedded=1';
+    frame.style.display = 'block';
+    document.getElementById('cvPlaceholder').style.display = 'none';
+  } else {
+    frame.style.display = 'none';
+    document.getElementById('cvPlaceholder').style.display = 'block';
+  }
+}
+function toggleCvRoot() {
+  const row = document.getElementById('cvRootRow');
+  row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+}
+async function startCanvas() {
+  const btn = document.getElementById('cvStart');
+  btn.disabled = true;
+  document.getElementById('cvStatus').textContent = '画布启动中…（约 5-20 秒）';
+  try {
+    const r = await rpc('canvas.start', { root: document.getElementById('cvRoot').value.trim() });
+    if (!r.ok) toast(r.error || '启动失败');
+    await loadCanvas();
+  } catch (e) { toast(e.message); btn.disabled = false; }
+}
+function stopCanvas() { rpc('canvas.stop').then(loadCanvas).catch(e => toast(e.message)); }
+function openCanvasExternal() {
+  rpc('canvas.get').then(st => { if (st.running) window.open(st.url, '_blank'); else toast('画布未启动'); }).catch(e => toast(e.message));
+}
+/* canvas iframe bridge: relay generation requests to host
+   协议（画布客户端 chunk 6651）：请求 {source:'kinglevel-canvas', type, payload:{...requestId}}，
+   应答 {source:'kinglevel-host', type, payload:{requestId, task|error}} —— 字段必须嵌在 payload 下 */
+let canvasOrigin = '';
+window.addEventListener('message', (event) => {
+  if (canvasOrigin && event.origin !== canvasOrigin) return;
+  const data = event.data;
+  if (!data || typeof data !== 'object' || !data.type) return;
+  if (data.type === 'module') return;
+  const type = data.type;
+  const payload = Object.assign({}, data.payload || data);
+  const reply = (type2, extra) => {
+    // 兼容两层：payload 嵌套（画布 6651 期望）+ 顶层副本（旧实现容错）
+    document.getElementById('cvFrame').contentWindow.postMessage(
+      Object.assign({ source: 'kinglevel-host', type: type2 }, extra, { payload: Object.assign({ requestId: payload.requestId }, extra) }), canvasOrigin);
+  };
+  if (type === 'video-generation-request') {
+    payload.requestId = payload.requestId || ('cv' + Date.now());
+    rpc('canvas.videoRequest', payload).then(result => {
+      reply('video-generation-created', result);
+    }).catch(err => {
+      reply('video-generation-created', { error: err.message });
+    });
+  } else if (type === 'video-generation-status-request') {
+    rpc('canvas.videoStatus', payload).then(result => {
+      reply('video-generation-status', result);
+    });
+  } else if (type === 'image-generation-request') {
+    payload.requestId = payload.requestId || ('cv' + Date.now());
+    rpc('canvas.imageSubmit', payload).then(result => {
+      reply('image-generation-created', result);
+    }).catch(err => {
+      reply('image-generation-created', { error: err.message });
+    });
+  } else if (type === 'image-generation-status-request') {
+    rpc('canvas.imageStatus', payload).then(result => {
+      reply('image-generation-status', result);
+    });
+  } else if (type === 'canvas-ready' || type === 'asset-list-request') {
+    rpc('canvas.assets').then(result => {
+      document.getElementById('cvFrame').contentWindow.postMessage(
+        Object.assign({ source: 'kinglevel-host', type: 'asset-list' }, result, { payload: { assets: result.assets } }), canvasOrigin);
+    });
+  }
+});
+
+/* ═══════════ assets ═══════════ */
+async function loadAssets() {
+  try {
+    const data = await rpc('assets.list');
+    document.getElementById('assetHint').textContent = '素材目录：' + data.dir + '（生成页/画布中作为参考素材引用）';
+    const icon = { '图片': '🖼', '视频': '🎬', '音频': '🎵', '文件': '📄' };
+    document.getElementById('assetGrid').innerHTML = (data.files || []).map(f => {
+      const alias = f.alias || '';
+      const draggable = f.kind === '图片' || f.kind === '视频';
+      return '<div class="tile" draggable="' + draggable + '" data-alias="' + esc(alias || f.name) + '"' + (draggable ? '' : ' aria-disabled="true"') + '>' +
+        '<div class="name">' + icon[f.kind] + ' ' + esc(f.name) + '</div>' +
+        '<div class="meta">' + f.kind + ' · ' + fmtSize(f.size) + ' · ' + esc(f.modified) + (alias ? ' · @' + esc(alias) : '') + '</div>' +
+        '<div class="ops"><button class="btn sm" data-act="alias" data-name="' + esc(f.name) + '" data-alias="' + esc(alias) + '">别名</button>' +
+        '<button class="btn sm" data-act="open" data-path="' + esc(f.path) + '">打开</button>' +
+        '<button class="btn sm danger" data-act="del" data-path="' + esc(f.path) + '">删除</button></div></div>';
+    }).join('') || '<div class="hint">目录为空 —— 点击「导入素材」添加参考图/视频/音频。图片/视频资产可设置别名后，在视频提示词里用 @别名 引用（提交时自动上传为参考素材），也可直接拖入提示词框。</div>';
+  } catch (e) { toast(e.message); }
+}
+function fmtSize(bytes) {
+  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+  return Math.round(bytes / 1024) + ' KB';
+}
+function openPath(target) {
+  if (/^https?:\/\//i.test(target)) {
+    try { window.open(target, '_blank'); } catch (e) { toast('打开失败'); }
+    return;
+  }
+  rpc('shell.openPath', { path: target }).catch(e => toast(e.message));
+}
+document.getElementById('assetGrid').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-path]');
+  if (!btn) return;
+  if (btn.dataset.act === 'open') openPath(btn.dataset.path); else deleteAsset(btn.dataset.path);
+});
+async function suggestAssetAlias(fileName) {
+  const data = await rpc('assets.list');
+  const taken = new Set();
+  for (const f of (data.files || [])) {
+    if (f.alias) taken.add(f.alias.toLowerCase());
+  }
+  let stem = (fileName.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'asset');
+  let candidate = stem, index = 1;
+  while (taken.has(candidate)) { candidate = stem + (++index); }
+  return candidate;
+}
+async function importAsset(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result.split(',')[1];
+    try {
+      await rpc('assets.importData', { name: file.name, dataBase64: base64 });
+      const alias = await suggestAssetAlias(file.name);
+      await rpc('assets.metaSet', { name: file.name, alias, assetKind: '', note: '' });
+      _assetAliasMap = null;
+      toast('素材已导入，别名 @' + alias);
+      loadAssets();
+    } catch (e) { toast('导入失败：' + e.message); }
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+/* ═══════════ works ═══════════ */
+let worksFilter = '';
+async function loadWorks() {
+  try {
+    worksCache = (await rpc('works.list')).items || [];
+    const sel = document.getElementById('worksAccount');
+    if (sel) {
+      const accounts = Array.from(new Set(worksCache.map(w => w.account).filter(Boolean)));
+      const prev = sel.value || worksFilter;
+      sel.innerHTML = '<option value="">全部账号</option>' + accounts.map(a => '<option>' + esc(a) + '</option>').join('');
+      sel.value = accounts.includes(prev) ? prev : '';
+      worksFilter = sel.value;
+      sel.onchange = () => { worksFilter = sel.value; renderWorks(); };
+    }
+    renderWorks();
+  } catch (e) { toast(e.message); }
+}
+function renderWorks() {
+  let items = worksCache || [];
+  if (worksFilter) items = items.filter(w => w.account === worksFilter);
+  document.getElementById('worksGrid').innerHTML = items.map(w =>
+    '<div class="tile"><div class="name">' + (w.type === '图片' ? '🖼' : '🎬') + ' ' + esc(w.title) + '</div>' +
+    '<div class="meta">' + esc(w.type) + ' · ' + esc(w.account) + ' · ' + esc(w.time) + '</div>' +
+    '<div class="ops"><button class="btn sm" data-id="' + esc(w.id) + '" data-act="open">打开</button>' +
+    '<button class="btn sm danger" data-id="' + esc(w.id) + '" data-act="del">删除</button></div></div>'
+  ).join('') || '<div class="hint">作品库为空 —— 在 Dola 工作台生成的作品会自动出现在这里。</div>';
+}
+document.getElementById('worksGrid').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-id]');
+  if (!btn) return;
+  const item = (worksCache || []).find(w => w.id === btn.dataset.id);
+  if (btn.dataset.act === 'open') {
+    const target = item && item.localPath ? item.localPath : (item ? item.url : '');
+    if (target) openPath(target); else toast('无本地文件');
+  } else if (btn.dataset.act === 'del') {
+    deleteWork(btn.dataset.id);
+  }
+});
+
+/* ═══════════ logs ═══════════ */
+let _logEntries = [];
+async function loadLogs() {
+  try {
+    const data = await rpc('logs.list');
+    _logEntries = data.entries || [];
+    renderLogs();
+  } catch (e) { toast(e.message); }
+}
+// 天启式日志视图：状态筛选（全部/进行中/成功/失败）+ 关键词搜索（账号/提示词/模型/来源）
+function renderLogs() {
+  const statusFilter = document.getElementById('logStatusFilter').value;
+  const keyword = document.getElementById('logSearch').value.trim().toLowerCase();
+  const entries = _logEntries.filter(e => {
+    if (statusFilter === 'running' && e.Status !== 'running') return false;
+    if (statusFilter === 'completed' && e.Status !== 'completed') return false;
+    if (statusFilter === 'failed' && !(e.Status === 'failed' || e.Status === 'canceled')) return false;
+    if (keyword) {
+      const haystack = ((e.AccountName || '') + ' ' + (e.Prompt || '') + ' ' + (e.Model || '') + ' ' + (e.Source || '')).toLowerCase();
+      if (haystack.indexOf(keyword) < 0) return false;
+    }
+    return true;
+  });
+  document.getElementById('logRows').innerHTML = entries.map(e => {
+    const resultText = e.Error || e.ResultPath || e.ResultUrl || '—';
+    let actionCell = '—';
+    if (e.ResultPath) {
+      actionCell = '<button class="btn sm" onclick="openLogResult(this.dataset.path)" data-path="' + esc(e.ResultPath) + '">打开</button>';
+    } else if (e.ResultUrl) {
+      actionCell = '<button class="btn sm" onclick="downloadLogResult(this.dataset.url)" data-url="' + esc(e.ResultUrl) + '">下载</button>';
+    }
+    return '<tr><td>' + esc(e.Time) + '</td><td>' + esc(e.Type) + '</td><td>' + esc(e.Model) + '</td><td>' + esc(e.AccountName || '—') + '</td>' +
+      '<td class="wrap" title="' + esc(e.Prompt || '') + '">' + esc(truncate(e.Prompt || '—', 60)) + '</td>' +
+      '<td>' + esc(e.Source) + '</td><td><span class="badge ' + (e.Status === 'completed' ? 'b-ok' : e.Status === 'failed' ? 'b-bad' : 'b-run') + '">' + esc(e.Status) + '</span></td>' +
+      '<td>' + (e.DurationMs > 0 ? Math.round(e.DurationMs / 1000) + 's' : '—') + '</td>' +
+      '<td class="wrap">' + esc(resultText) + '</td>' +
+      '<td>' + actionCell + '</td></tr>';
+  }).join('') || '<tr><td class="empty" colspan="10">' + (keyword || statusFilter ? '没有符合条件的日志' : '暂无生成记录') + '</td></tr>';
+}
+async function openLogResult(path) {
+  try {
+    const r = await rpc('logs.openResult', { path });
+    if (!r.ok) toast(r.message || '本地文件不存在');
+  } catch (e) { toast(e.message); }
+}
+async function downloadLogResult(url) {
+  toast('下载中…');
+  try {
+    const r = await rpc('logs.downloadResult', { url });
+    if (r.ok) toast('已下载 → ' + r.path);
+    else toast('下载失败：' + r.message);
+  } catch (e) { toast(e.message); }
+}
+async function exportLogs() {
+  try { const r = await rpc('logs.export'); toast('已导出 → ' + r.path); } catch (e) { toast(e.message); }
+}
+async function clearLogs() {
+  if (!confirm('确定清空全部生成记录？')) return;
+  await rpc('logs.clear'); loadLogs(); toast('已清空');
+}
+
+/* ═══════════ proxies ═══════════ */
+async function loadProxies() {
+  try {
+    const data = await rpc('proxy.list');
+    const proxies = data.proxies || [];
+    const okCount = proxies.filter(p => p.ok === true).length;
+    const badCount = proxies.filter(p => p.ok === false).length;
+    document.getElementById('pxStats').innerHTML = [
+      ['代理总数', proxies.length], ['连通正常', okCount], ['连通失败', badCount], ['未检测', proxies.length - okCount - badCount]
+    ].map(([k, v]) => '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>').join('');
+    document.getElementById('proxyRows').innerHTML = (proxies || []).map(p =>
+      '<tr><td><span style="cursor:pointer;border-bottom:1px dashed #94a3b8" title="点击重命名（留空恢复默认编号）" data-url="' + esc(p.url) + '" data-name="' + esc(p.name || '') + '" onclick="renameProxy(this.dataset.url, this.dataset.name)">' + esc(p.name || '未命名') + '</span></td>' +
+      '<td>' + esc(p.url) + '</td><td>' + esc(p.type) + '</td>' +
+      '<td>' + (p.ok == null ? '<span class="badge b-idle">未检测</span>' : p.ok ? '<span class="badge b-ok">正常</span>' : '<span class="badge b-bad">失败</span>') + '</td>' +
+      '<td>' + (p.ok ? p.latency + ' ms' : '—') + '</td><td>' + esc(p.checkedAt || '—') + '</td>' +
+      '<td><button class="btn sm danger" data-url="' + esc(p.url) + '" data-act="remove">删除</button></td></tr>'
+    ).join('') || '<tr><td class="empty" colspan="7">代理池为空</td></tr>';
+  } catch (e) { toast(e.message); }
+}
+async function renameProxy(url, current) {
+  const name = prompt('输入代理名称（留空恢复默认编号：代理1、代理2…）：', current || '');
+  if (name == null) return;
+  try {
+    const r = await rpc('proxy.rename', { url, name: name.trim() });
+    if (!r.ok) { toast(r.message || '重命名失败'); return; }
+    loadProxies();
+  } catch (e) { toast(e.message); }
+}
+async function importProxies() {
+  const text = document.getElementById('proxyInput').value;
+  if (!text.trim()) { toast('先粘贴代理'); return; }
+  try { const r = await rpc('proxy.import', { text }); toast(r.added ? '已导入 ' + r.added + ' 条（共 ' + r.total + '）' : '没有新增（格式无效或重复）'); document.getElementById('proxyInput').value = ''; loadProxies(); }
+  catch (e) { toast(e.message); }
+}
+// ═══ 按协议添加代理：表单拼 URL → 探测 → 入池 ═══
+// 协议对应提示：SOCKS5 带认证时 Chromium 内核无法直连使用（探测会给出结论）
+function onProxySchemeChange() { }
+// 带账号密码的 SOCKS5：Chromium 内核不支持代理认证，赋号时给出明确警告
+function warnSocks5Auth(url) {
+  if (url.indexOf('socks5://') === 0 && url.indexOf('@') >= 0) {
+    toast('注意：带账号密码的 SOCKS5 代理 Chromium 内核不支持认证，可能无法使用');
+  }
+}
+function buildProxyFormUrl() {
+  const scheme = document.getElementById('pxScheme').value;
+  const host = document.getElementById('pxHost').value.trim();
+  const port = document.getElementById('pxPort').value.trim();
+  const user = document.getElementById('pxUser').value.trim();
+  const pass = document.getElementById('pxPass').value;
+  if (!host) return { error: '请填写代理地址' };
+  if (!/^\d{1,5}$/.test(port) || +port < 1 || +port > 65535) return { error: '端口需为 1-65535 的数字' };
+  const auth = user ? encodeURIComponent(user) + ':' + encodeURIComponent(pass) + '@' : '';
+  return { url: scheme + '://' + auth + host + ':' + port };
+}
+function setProxyProbeResult(text, ok) {
+  const el = document.getElementById('pxProbeResult');
+  el.textContent = text;
+  el.style.color = ok ? '#16a34a' : '#ef4444';
+}
+async function probeProxyForm(showUi) {
+  const built = buildProxyFormUrl();
+  if (built.error) {
+    if (showUi) setProxyProbeResult(built.error, false);
+    return { error: built.error };
+  }
+  if (showUi) setProxyProbeResult('检测中…', true);
+  try {
+    const r = await rpc('proxy.probe', { url: built.url });
+    if (showUi) setProxyProbeResult(r.ok ? '连通正常，延迟 ' + r.latency + ' ms' : (r.message || '连通失败'), r.ok);
+    return { url: built.url, ok: !!r.ok, latency: r.latency };
+  } catch (e) {
+    if (showUi) setProxyProbeResult('检测失败：' + e.message, false);
+    return { error: e.message };
+  }
+}
+async function addProxyFromForm() {
+  const probe = await probeProxyForm(true);
+  if (probe.error) return;
+  if (!probe.ok && !confirm('连通性检测失败（TCP 不通），仍要添加这条代理吗？')) return;
+  try {
+    const r = await rpc('proxy.import', { text: probe.url });
+    toast(r.added ? (probe.ok ? '已添加，连通正常（' + probe.latency + ' ms）' : '已添加（连通性失败，可稍后在列表里重新检测）') : '没有新增（该代理可能已存在）');
+    if (r.added) loadProxies();
+  } catch (e) { toast(e.message); }
+}
+async function checkProxies() {
+  toast('检测全部代理中…');
+  try { await rpc('proxy.check'); toast('检测完成'); loadProxies(); } catch (e) { toast(e.message); }
+}
+document.getElementById('assetGrid').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-act]');
+  if (!btn) return;
+  if (btn.dataset.act === 'alias') {
+    const name = btn.dataset.name, current = btn.dataset.alias || '';
+    const alias = prompt('输入资产别名（用于提示词 @引用，建议英文/数字）：', current);
+    if (alias == null) return;
+    const trimmed = alias.trim();
+    if (!trimmed) { toast('别名不能为空'); return; }
+    rpc('assets.metaSet', { name, alias: trimmed, assetKind: '', note: '' })
+      .then(() => { toast('别名已设置：@' + trimmed); loadAssets(); })
+      .catch(e => toast(e.message));
+  }
+});
+// 资产卡拖动时携带 @别名
+document.getElementById('assetGrid').addEventListener('dragstart', (ev) => {
+  const tile = ev.target.closest && ev.target.closest('.tile');
+  if (!tile) return;
+  try { ev.dataTransfer.setData('text/plain', tile.dataset.alias || ''); } catch (e) { }
+});
+// 拖入图片/视频提示词框：插入 @别名
+for (const promptId of ['imgPrompt', 'vidPrompt']) {
+  const box = document.getElementById(promptId);
+  box.addEventListener('dragover', (ev) => { ev.preventDefault(); box.style.borderColor = 'var(--border-strong)'; });
+  box.addEventListener('dragleave', () => { box.style.borderColor = ''; });
+  box.addEventListener('drop', (ev) => {
+    ev.preventDefault();
+    box.style.borderColor = '';
+    const alias = (ev.dataTransfer.getData('text/plain') || '').trim();
+    if (alias) {
+      box.value += (box.value ? '\n' : '') + '@' + alias;
+      toast('已插入引用 @' + alias + '（视频提交时自动上传为参考素材）');
+    }
+  });
+}
+document.getElementById('proxyRows').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-url]');
+  if (!btn) return;
+  rpc('proxy.remove', { url: btn.dataset.url }).then(loadProxies).catch(e => toast(e.message));
+})
+
+/* ═══════════ ai config ═══════════ */
+async function loadAi() {
+  try {
+    const c = await rpc('ai.get');
+    document.getElementById('llmBase').value = c.llmBaseUrl || '';
+    document.getElementById('llmKey').value = c.llmApiKey || '';
+    document.getElementById('llmModel').value = c.llmModel || '';
+    document.getElementById('imageBase').value = c.imageBaseUrl || '';
+    document.getElementById('imageKey').value = c.imageApiKey || '';
+    document.getElementById('imageModel').value = c.imageModel || '';
+  } catch (e) { toast(e.message); }
+}
+async function saveAi() {
+  try {
+    await rpc('ai.save', {
+      llmBaseUrl: document.getElementById('llmBase').value.trim(),
+      llmApiKey: document.getElementById('llmKey').value.trim(),
+      llmModel: document.getElementById('llmModel').value.trim(),
+      imageBaseUrl: document.getElementById('imageBase').value.trim(),
+      imageApiKey: document.getElementById('imageKey').value.trim(),
+      imageModel: document.getElementById('imageModel').value.trim() || 'image2'
+    });
+    toast('AI 模型配置已保存');
+  } catch (e) { toast(e.message); }
+}
+
+/* ═══════════ api server ═══════════ */
+async function saveApiDocs() {
+  try { const r = await rpc('api.docsSave'); if (r.cancelled) { toast('已取消保存'); return; } toast('API 文档已导出 → ' + r.path); }
+  catch (e) { toast(e.message); }
+}
+async function fetchAiModels(kind) {
+  const base = document.getElementById(kind === 'llm' ? 'llmBase' : 'imageBase').value.trim();
+  const key = document.getElementById(kind === 'llm' ? 'llmKey' : 'imageKey').value.trim();
+  if (!base) { toast('请先填写接口地址'); return; }
+  toast('获取上游模型中…');
+  try {
+    const r = await rpc('ai.models', { base, key });
+    if (!r.ok) { toast('获取失败：' + (r.message || '上游未返回模型')); return; }
+    const pick = document.getElementById(kind === 'llm' ? 'llmModelPick' : 'imageModelPick');
+    pick.innerHTML = '<option value="">— 共 ' + r.models.length + ' 个模型，选择后自动填入 —</option>' +
+      r.models.map(m => '<option value="' + esc(m) + '">' + esc(m) + '</option>').join('');
+    pick.style.display = '';
+    toast('已获取 ' + r.models.length + ' 个上游模型');
+  } catch (e) { toast(e.message); }
+}
+function applyAiModelPick(kind) {
+  const pick = document.getElementById(kind === 'llm' ? 'llmModelPick' : 'imageModelPick');
+  const input = document.getElementById(kind === 'llm' ? 'llmModel' : 'imageModel');
+  if (pick.value) input.value = pick.value;
+}
+async function loadApi() {
+  try {
+    const s = await rpc('api.get');
+    document.getElementById('apiRunning').innerHTML = s.running ? '<span class="ok-text">运行中</span>' : '<span class="bad-text">已停止</span>';
+    document.getElementById('apiPort').textContent = s.port;
+    document.getElementById('apiBase').textContent = 'http://127.0.0.1:' + s.port + '/v1';
+    document.getElementById('apiKey').textContent = s.key;
+  } catch (e) { toast(e.message); }
+}
+
+/* ═══════════ utils ═══════════ */
+function nowTime() { return new Date().toTimeString().slice(0, 8); }
+function fmtDur(ms) { return new Date(ms).toISOString().substr(14, 5); }
+function truncate(text, len) { text = String(text || ''); return text.length <= len ? text : text.slice(0, len) + '…'; }
+</script>
+<script data-tq>
+/* ═══════════ TQ_MODULES_PORTED 天启移植模块 ═══════════ */
+Object.assign(MODULES, {
+  Video2: ['视频生成2', '天启式单次生成 · 有序参考图 · 运行日志', loadV2],
+  Batch2: ['批量生成2', '分镜任务 · 导入表格 · 项目参考图', loadB2],
+  Canvas2: ['无限画布2', '节点编排 · 导演台 · AI 创作', loadCv2],
+  Logs2: ['生成日志2', '任务事件 · 状态统计', loadLg2],
+  Media2: ['媒体库2', '成品结果 · 筛选 · 打开目录', loadMd2],
+  Assets2: ['资产库2', '角色/场景/道具 · @引用', loadAs2]
+});
+
+/* ── 有序参考图组件（图1/图2/图3…）── */
+const TQ_KINDS = [['.png', '图片'], ['.jpg', '图片'], ['.jpeg', '图片'], ['.webp', '图片'], ['.gif', '图片'], ['.bmp', '图片'], ['.mp4', '视频'], ['.mov', '视频'], ['.m4v', '视频'], ['.mp3', '音频'], ['.wav', '音频'], ['.m4a', '音频']];
+function tqKindOf(name) { const n = String(name || '').toLowerCase(); for (const [e, k] of TQ_KINDS) if (n.endsWith(e)) return k; return ''; }
+function tqMakeBox(prefix, opts) {
+  opts = opts || {};
+  const st = { items: [] };
+  const chips = document.getElementById(prefix + 'Chips');
+  const drop = document.getElementById(prefix + 'Drop');
+  const fileInput = document.getElementById(prefix + 'File');
+  const pickBtn = document.getElementById(prefix + 'Pick');
+  function render() {
+    if (!chips) return;
+    if (!st.items.length) { chips.innerHTML = '<span class="tq-hint">尚未添加。添加后按顺序作为 图1、图2… 被提示词引用</span>'; return; }
+    chips.innerHTML = st.items.map((it, i) => {
+      const label = it.kind === '图片' ? '图' + (i + 1) : '素材' + (i + 1);
+      const vis = it.kind === '图片' && it.url ? '<img src="' + esc(it.url) + '">' : '<div class="tq-chip-icon">' + (it.kind === '视频' ? '🎬' : it.kind === '音频' ? '🎵' : '📄') + '</div>';
+      return '<div class="tq-chip">' + vis + '<div class="tq-chip-order">' + label + '</div>' +
+        '<div class="tq-chip-name" title="' + esc(it.name) + '">' + esc(it.name) + '</div>' +
+        '<div class="tq-chip-ops"><button data-a="up" data-i="' + i + '" title="前移">↑</button><button data-a="down" data-i="' + i + '" title="后移">↓</button><button data-a="del" data-i="' + i + '" title="移除">✕</button></div></div>';
+    }).join('');
+  }
+  chips.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const i = Number(b.dataset.i);
+    if (b.dataset.a === 'del') st.items.splice(i, 1);
+    if (b.dataset.a === 'up' && i > 0) { const t = st.items[i - 1]; st.items[i - 1] = st.items[i]; st.items[i] = t; }
+    if (b.dataset.a === 'down' && i < st.items.length - 1) { const t = st.items[i + 1]; st.items[i + 1] = st.items[i]; st.items[i] = t; }
+    render();
+  });
+  async function addFiles(list) {
+    for (const f of list) {
+      if (st.items.length >= (opts.max || 20)) { toast('参考素材最多 ' + (opts.max || 20) + ' 个'); break; }
+      const kind = tqKindOf(f.name);
+      if (!kind) { toast('不支持的文件类型：' + f.name); continue; }
+      if (f.size === 0) { toast('空文件：' + f.name); continue; }
+      if (f.size > 10 * 1024 * 1024) { toast(f.name + ' 超过 10MB'); continue; }
+      try {
+        const buf = new Uint8Array(await f.arrayBuffer());
+        let bin = '';
+        for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+        const seq = String(st.items.length + 1).padStart(2, '0');
+        const safe = f.name.replace(/[\\/:*?"<>|]/g, '_');
+        const r = await rpc('assets.importData', { name: 'ref' + seq + '_' + Date.now() + '_' + safe, dataBase64: btoa(bin) });
+        st.items.push({ path: r.path, name: f.name, kind, url: kind === '图片' ? URL.createObjectURL(f) : '' });
+        render();
+      } catch (e) { toast('上传失败：' + e.message); }
+    }
+  }
+  if (pickBtn) pickBtn.addEventListener('click', () => fileInput.click());
+  if (fileInput) fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+  if (drop) {
+    drop.addEventListener('click', () => fileInput.click());
+    drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); });
+  }
+  return {
+    items: () => st.items.map(i => i.path),
+    count: () => st.items.length,
+    addFiles,
+    clear: () => { st.items = []; render(); }
+  };
+}
+
+/* ── 视频生成2 ── */
+let v2Box = null, v2Timer = null;
+function v2Durations() {
+  const m = document.getElementById('v2Model').value;
+  document.getElementById('v2Duration').innerHTML = m === 'seedance-2.5'
+    ? '<option value="30">30 秒 / 2 额度</option>'
+    : '<option value="5">5 秒 / 1 额度</option><option value="10">10 秒 / 2 额度</option><option value="15">15 秒 / 3 额度</option>';
+}
+function v2Log(msg) {
+  const el = document.getElementById('v2Log');
+  if (el.querySelector('div') && el.querySelector('div').textContent === '暂无日志') el.innerHTML = '';
+  el.insertAdjacentHTML('afterbegin', '<div>' + esc(nowTime()) + ' · ' + esc(msg) + '</div>');
+}
+function v2Status(cls, title, msg) {
+  const d = document.getElementById('v2Dot');
+  d.className = 'tq-status-dot ' + (cls || '');
+  document.getElementById('v2StatusTitle').textContent = title;
+  document.getElementById('v2StatusMsg').textContent = msg || '';
+}
+async function loadV2() {
+  if (!v2Box) {
+    v2Box = tqMakeBox('v2', { max: 20 });
+    document.getElementById('v2Model').addEventListener('change', v2Durations);
+    v2Durations();
+    document.getElementById('v2Go').addEventListener('click', v2Submit);
+  }
+  try {
+    const d = await rpc('accounts.list');
+    const sel = document.getElementById('v2Account');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">自动轮转</option>' + (d.accounts || []).filter(a => (a.status || '').indexOf('已登录') >= 0)
+      .map(a => '<option value="' + esc(a.id) + '">' + esc(a.name) + '</option>').join('');
+    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  } catch (e) { }
+}
+async function v2Submit() {
+  const prompt = document.getElementById('v2Prompt').value.trim();
+  if (!prompt) { toast('请先输入提示词'); return; }
+  const refs = v2Box.items();
+  const model = document.getElementById('v2Model').value;
+  const payload = {
+    model, prompt,
+    duration: parseInt(document.getElementById('v2Duration').value, 10) || 5,
+    ratio: document.getElementById('v2Ratio').value,
+    resolution: document.getElementById('v2Quality').value,
+    accountId: document.getElementById('v2Account').value,
+    referencePaths: refs
+  };
+  v2Status('run', '提交中…', '正在创建任务' + (refs.length ? '（附带 ' + refs.length + ' 张有序参考图）' : ''));
+  v2Log('提交任务 · 模型 ' + model + ' · 参考图 ' + refs.length + ' 张');
+  try {
+    const r = await rpc('gen.video', payload);
+    v2Status('run', '生成中', '任务已受理，等待 dola 出片');
+    v2Log('任务已受理：' + r.taskId);
+    clearInterval(v2Timer);
+    const started = Date.now();
+    v2Timer = setInterval(async () => {
+      try {
+        const st = await rpc('gen.status', { taskId: r.taskId });
+        if (st.status === 'completed') {
+          clearInterval(v2Timer);
+          v2Status('ok', '生成完成', '用时 ' + fmtDur(Date.now() - started));
+          v2Log('完成：' + (st.resultUrl || '').slice(0, 80));
+          document.getElementById('v2Result') || 0;
+        } else if (st.status === 'failed') {
+          clearInterval(v2Timer);
+          v2Status('bad', '生成失败', st.error || '');
+          v2Log('失败：' + (st.error || ''));
+        }
+      } catch (e) { }
+    }, 3000);
+  } catch (e) {
+    v2Status('bad', '提交失败', e.message);
+    v2Log('提交失败：' + e.message);
+  }
+}
+
+/* ── 批量生成2 ── */
+let b2Box = null, b2Rows = [], b2Timer = null;
+function b2Durations() {
+  const m = document.getElementById('b2Model').value;
+  document.getElementById('b2Duration').innerHTML = m === 'seedance-2.5'
+    ? '<option value="30">30 秒 / 2 额度</option>'
+    : '<option value="5">5 秒 / 1 额度</option><option value="10">10 秒 / 2 额度</option><option value="15">15 秒 / 3 额度</option>';
+}
+function loadB2() {
+  if (!b2Box) {
+    b2Box = tqMakeBox('b2', { max: 20 });
+    document.getElementById('b2Model').addEventListener('change', b2Durations);
+    b2Durations();
+    document.getElementById('b2QueueAll').addEventListener('click', b2Queue);
+    document.getElementById('b2Stop').addEventListener('click', () => rpc('batch.stop').then(() => { toast('已停止'); loadB2State(); }));
+    document.getElementById('b2Import').addEventListener('click', () => document.getElementById('b2ImportFile').click());
+    document.getElementById('b2ImportFile').addEventListener('change', b2Import);
+    b2Timer = setInterval(loadB2State, 3000);
+  }
+  loadB2State();
+}
+async function b2Import() {
+  const input = document.getElementById('b2ImportFile');
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  try {
+    const r = await rpc('batch.importTable', { dataBase64: btoa(bin), fileName: file.name });
+    b2Rows = r.rows.map(row => ({ prompt: row.prompt, model: row.model || '', duration: row.duration || '', ratio: row.ratio || '', account: row.account || '', references: row.references || '', status: '待排队' }));
+    b2Render();
+    toast('导入成功：' + r.count + ' 个分镜');
+  } catch (e) { toast('导入失败：' + e.message); }
+  input.value = '';
+}
+function b2Queue() {
+  const refs = b2Box ? b2Box.items() : [];
+  let rows = b2Rows.map(r => ({ prompt: r.prompt, model: r.model, duration: r.duration, ratio: r.ratio, account: r.account, references: r.references || refs.join(','), referencePaths: (!r.references && refs.length) ? refs : undefined }));
+  if (!rows.length) {
+    const lines = document.getElementById('b2Prompt').value.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+    if (!lines.length) { toast('请先添加分镜（输入或导入）'); return; }
+    rows = lines.map(line => ({ prompt: line, references: refs.join(','), referencePaths: refs }));
+  }
+  const payload = {
+    kind: 'video',
+    model: document.getElementById('b2Model').value,
+    duration: parseInt(document.getElementById('b2Duration').value, 10) || 5,
+    ratio: document.getElementById('b2Ratio').value,
+    accountId: document.getElementById('b2Account').value,
+    rows
+  };
+  rpc('batch.start', payload).then(r => {
+    toast('已入队 ' + r.count + ' 个分镜任务');
+    b2Rows = rows.map((row, i) => Object.assign({ status: '排队中' }, row));
+    b2Render();
+    loadB2State();
+  }).catch(e => toast(e.message));
+}
+function b2Render() {
+  const box = document.getElementById('b2Cards');
+  document.getElementById('b2Count').textContent = b2Rows.length + ' 条';
+  document.getElementById('b2Empty').style.display = b2Rows.length ? 'none' : '';
+  box.innerHTML = b2Rows.map((r, i) => '<div class="tq-card"><div class="tnum">' + (i + 1) + '</div><div class="tbody"><div class="tprompt">' + esc(r.prompt || '') + '</div><div class="tmeta"><span>' + esc(r.model || '默认模型') + '</span><span>' + esc(r.ratio || '') + '</span><span>' + esc(r.status || '') + '</span></div></div></div>').join('');
+}
+async function loadB2State() {
+  let st;
+  try { st = await rpc('batch.state'); } catch (e) { return; }
+  if (st.rows && st.rows.length) {
+    b2Rows = st.rows.map((r, i) => ({ prompt: r.text || r.prompt, status: r.status, model: '', ratio: '', references: '', account: r.account || '' }));
+    b2Render();
+  }
+}
+
+/* ── 无限画布2 ── */
+let cv2Booted = false;
+async function loadCv2() {
+  try {
+    const st = await rpc('canvas.get');
+    if (!st.running) { await rpc('canvas.start', {}); }
+    const st2 = await rpc('canvas.get');
+    if (st2.running) {
+      const f = document.getElementById('cv2Frame');
+      if (!f.src || f.src === 'about:blank') f.src = st2.url;
+      document.getElementById('cv2Dot').className = 'tq-status-dot ok';
+      document.getElementById('cv2Msg').textContent = '运行中 · ' + st2.url;
+      document.getElementById('cv2Open').disabled = false;
+    } else {
+      document.getElementById('cv2Dot').className = 'tq-status-dot bad';
+      document.getElementById('cv2Msg').textContent = st2.error || '画布未启动';
+    }
+  } catch (e) {
+    document.getElementById('cv2Dot').className = 'tq-status-dot bad';
+    document.getElementById('cv2Msg').textContent = e.message;
+  }
+  if (!cv2Booted) {
+    cv2Booted = true;
+    document.getElementById('cv2Reload').addEventListener('click', async () => {
+      try { await rpc('canvas.stop'); } catch (e) { }
+      document.getElementById('cv2Frame').src = 'about:blank';
+      loadCv2();
+    });
+    document.getElementById('cv2Open').addEventListener('click', async () => {
+      try { const st = await rpc('canvas.get'); if (st.url) window.open(st.url); } catch (e) { }
+    });
+  }
+}
+
+/* ── 生成日志2 ── */
+async function loadLg2() {
+  let r;
+  try { r = await rpc('logs.list'); } catch (e) { return; }
+  const entries = r.entries || [];
+  let ok = 0, run = 0, bad = 0;
+  const rows = entries.map(e => {
+    const status = e.status || '';
+    if (status === 'completed') ok++; else if (status === 'failed') bad++; else run++;
+    const detail = e.error || e.resultPath || e.resultUrl || '—';
+    return '<div>' + esc(e.time || '') + ' · [' + esc(e.type || '') + '] ' + esc(status) + ' · ' + esc(e.model || '') + ' · ' + esc((e.prompt || '').slice(0, 40)) + ' · <span class="' + (status === 'failed' ? 'bad-text' : 'ok-text') + '">' + esc(truncate(detail, 70)) + '</span></div>';
+  });
+  document.getElementById('lg2All').textContent = entries.length;
+  document.getElementById('lg2Ok').textContent = ok;
+  document.getElementById('lg2Run').textContent = run;
+  document.getElementById('lg2Bad').textContent = bad;
+  document.getElementById('lg2List').innerHTML = rows.join('') || '<div>暂无日志</div>';
+}
+
+/* ── 媒体库2 ── */
+let md2Filter = 'all';
+async function loadMd2() {
+  let r;
+  try { r = await rpc('works.list'); } catch (e) { return; }
+  const items = (r.items || []).filter(it => md2Filter === 'all' || it.type === md2Filter);
+  const grid = document.getElementById('md2Grid');
+  document.getElementById('md2Empty').style.display = items.length ? 'none' : '';
+  grid.innerHTML = items.map(it => {
+    const vis = it.type === '图片'
+      ? '<img src="' + esc(it.thumb || it.localPath || '') + '" onerror="this.style.display=\'none\'">'
+      : '<div class="ph">🎬</div>';
+    return '<div class="tq-grid-card">' + vis + '<div class="gc-body"><div class="gc-name" title="' + esc(it.title) + '">' + esc(it.title || '未命名') + '</div>' +
+      '<div class="gc-meta">' + esc(it.type) + ' · ' + esc((it.time || '').slice(0, 16)) + ' · ' + esc(it.account || '') + '</div>' +
+      '<div class="gc-ops"><button class="btn" data-open="' + esc(it.localPath || '') + '">打开文件</button><button class="btn" data-copy2="' + esc(it.url || it.localPath || '') + '">复制链接</button><button class="btn" data-del="' + esc(it.id) + '">删除</button></div></div></div>';
+  }).join('');
+}
+document.addEventListener('click', (e) => {
+  const open = e.target.closest('[data-open]');
+  if (open && open.dataset.open) { rpc('shell.openPath', { path: open.dataset.open }); return; }
+  const del = e.target.closest('[data-del]');
+  if (del && del.dataset.del) { rpc('works.delete', { id: del.dataset.del }).then(loadMd2); return; }
+  const cp = e.target.closest('[data-copy2]');
+  if (cp && cp.dataset.copy2) copyText(cp.dataset.copy2);
+  const mdF = e.target.closest('[data-md2]');
+  if (mdF) { document.querySelectorAll('[data-md2]').forEach(x => x.classList.remove('active')); mdF.classList.add('active'); md2Filter = mdF.dataset.md2; loadMd2(); }
+  const asF = e.target.closest('[data-as2]');
+  if (asF) { document.querySelectorAll('[data-as2]').forEach(x => x.classList.remove('active')); asF.classList.add('active'); as2Filter = asF.dataset.as2; loadAs2(); }
+});
+
+/* ── 资产库2 ── */
+let as2Filter = 'all', as2Items = [];
+async function loadAs2() {
+  let r;
+  try { r = await rpc('assets.list'); } catch (e) { return; }
+  as2Items = r.files || [];
+  as2Render();
+}
+function as2Render() {
+  const q = (document.getElementById('as2Search').value || '').toLowerCase();
+  const items = as2Items.filter(it => {
+    if (as2Filter !== 'all' && (it.assetKind || '') !== as2Filter) return false;
+    if (q && (it.name || '').toLowerCase().indexOf(q) < 0 && (it.alias || '').toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+  const grid = document.getElementById('as2Grid');
+  document.getElementById('as2Empty').style.display = items.length ? 'none' : '';
+  const icon = { '图片': '🖼', '视频': '🎬', '音频': '🎵', '文件': '📄' };
+  grid.innerHTML = items.map(it => '<div class="tq-grid-card"><div class="ph">' + (icon[it.kind] || '📄') + '</div><div class="gc-body">' +
+    '<div class="gc-name" title="' + esc(it.name) + '">' + esc(it.name) + '</div>' +
+    '<div class="gc-meta">' + esc(it.kind) + ' · ' + esc(it.alias ? '@' + it.alias : '未设别名') + (it.assetKind ? ' · ' + esc(it.assetKind) : '') + '</div>' +
+    '<div class="gc-ops"><button class="btn" data-as2alias="' + esc(it.name) + '">设别名/分类</button><button class="btn" data-as2del="' + esc(it.name) + '">删除</button></div></div></div>').join('');
+}
+document.getElementById('as2Search') && document.getElementById('as2Search').addEventListener('input', as2Render);
+document.addEventListener('click', (e) => {
+  const al = e.target.closest('[data-as2alias]');
+  if (al) {
+    const name = al.dataset.as2alias;
+    const it = as2Items.find(x => x.name === name) || {};
+    const alias = prompt('设置 @别名（用于提示词引用）：', it.alias || '');
+    if (alias === null) return;
+    const kind = prompt('分类（角色/场景/道具/其他，留空=其他）：', it.assetKind || '') || '';
+    rpc('assets.metaSet', { name, alias: alias.trim(), assetKind: kind.trim(), note: '' }).then(() => { toast('已保存'); loadAs2(); }).catch(er => toast(er.message));
+    return;
+  }
+  const del = e.target.closest('[data-as2del]');
+  if (del) { if (confirm('删除资产 ' + del.dataset.as2del + '？')) rpc('assets.delete', { name: del.dataset.as2del }).then(loadAs2); }
+});
+async function loadAs2Add(files) {
+  for (const f of files) {
+    if (!f.size) continue;
+    if (f.size > 50 * 1024 * 1024) { toast(f.name + ' 超过 50MB'); continue; }
+    const buf = new Uint8Array(await f.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+    try { await rpc('assets.importData', { name: f.name.replace(/[\\/:*?"<>|]/g, '_'), dataBase64: btoa(bin) }); }
+    catch (e) { toast('导入失败：' + e.message); }
+  }
+  toast('资产已导入');
+  loadAs2();
+}
+
+
+/* 天启移植：file input 接线 */
+document.addEventListener('DOMContentLoaded', () => {});
+(function tqWire() {
+  const wire = () => {
+    const pairs = [['v2File', () => window.__v2Box], ['b2File', () => window.__b2Box], ['as2File', (fs) => loadAs2Add(fs)]];
+    for (const [id, getBox] of pairs) {
+      const input = document.getElementById(id);
+      if (!input || input.dataset.tqwired) continue;
+      input.dataset.tqwired = '1';
+      input.addEventListener('change', async function () {
+        const box = getBox();
+        if (box && box.addFiles) await box.addFiles(this.files);
+        else if (typeof loadAs2Add === 'function' && id === 'as2File') await loadAs2Add(this.files);
+        this.value = '';
+      });
+    }
+    setTimeout(tqWire, 800);
+  };
+  setTimeout(tqWire, 600);
+})();
+/* 原面板有序参考图盒子 */
+let vidRefBox = null, imgRefBox = null, batRefBox = null;
+const _origTqMakeBox2 = tqMakeBox;
+tqMakeBox = function (prefix, opts) {
+  const box = _origTqMakeBox2(prefix, opts);
+  if (prefix === 'vidRef') vidRefBox = box;
+  if (prefix === 'imgRef') imgRefBox = box;
+  if (prefix === 'batRef') batRefBox = box;
+  return box;
+};
+tqMakeBox('vidRef', { max: 20 });
+tqMakeBox('imgRef', { max: 20 });
+tqMakeBox('batRef', { max: 20 });
+
+/* 原面板提交集成 */
+(function () {
+  const _sv = submitVideoInner;
+  submitVideoInner = async function (prompt) {
+    const aliasPaths = [];
+    if (prompt) {
+      const map = await getAssetAliasMap();
+      for (const token of (prompt.match(/@[^\s@，,]+/g) || [])) { const p = map[token]; if (p) aliasPaths.push(p); }
+    }
+    const ordered = (vidRefBox ? vidRefBox.items() : []).concat(aliasPaths);
+    if (ordered.length) {
+      const _origRpc = rpc;
+      window.rpc = async (name, payload) => {
+        if (name === 'gen.video' && payload) { payload.referencePaths = ordered; window.rpc = _origRpc; }
+        return _origRpc(name, payload);
+      };
+    }
+    return _sv(prompt);
+  };
+  const _si = submitImageInner;
+  submitImageInner = async function (prompt) {
+    const aliasPaths = [];
+    if (prompt) {
+      const map = await getAssetAliasMap();
+      for (const token of (prompt.match(/@[^\s@，,]+/g) || [])) { const p = map[token]; if (p) aliasPaths.push(p); }
+    }
+    const ordered = (imgRefBox ? imgRefBox.items() : []).concat(aliasPaths);
+    if (ordered.length) {
+      const _origRpc = rpc;
+      window.rpc = async (name, payload) => {
+        if (name === 'gen.imageSeedream' && payload) { payload.referencePaths = ordered; window.rpc = _origRpc; }
+        return _origRpc(name, payload);
+      };
+    }
+    return _si(prompt);
+  };
+  const _sb = startBatch;
+  startBatch = async function () {
+    const refs = batRefBox ? batRefBox.items() : [];
+    if (refs.length) {
+      const _origRpc = rpc;
+      window.rpc = async (name, payload) => {
+        if (name === 'batch.start' && payload && payload.rows) {
+          payload.rows = payload.rows.map(r => Object.assign({}, r, { referencePaths: (r.referencePaths && r.referencePaths.length) ? r.referencePaths : refs }));
+          window.rpc = _origRpc;
+        }
+        return _origRpc(name, payload);
+      };
+    }
+    return _sb();
+  };
+})();
+/* 暴露盒子实例 */
+const _origTqMakeBox = tqMakeBox;
+tqMakeBox = function (prefix, opts) {
+  const box = _origTqMakeBox(prefix, opts);
+  if (prefix === 'v2') window.__v2Box = box;
+  if (prefix === 'b2') window.__b2Box = box;
+  return box;
+};
+</script>
+</body>
+</html>

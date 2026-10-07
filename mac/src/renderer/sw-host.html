@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>扩展宿主（无水印引擎）</title>
+<style>
+  body { background:#0d1321; color:#9ca8c0; font:13px/1.7 -apple-system,"PingFang SC",sans-serif; padding:16px; }
+  h1 { font-size:14px; color:#f4f7ff; margin:0 0 8px; }
+  code { color:#70dce5; }
+</style>
+</head>
+<body>
+<h1>无水印引擎宿主</h1>
+<p>本窗口承载扩展的 service worker，正常使用时隐藏。</p>
+<p>调试：以 <code>DOLA_DEBUG=1 npm start</code> 启动可显示本窗口与控制台。</p>
+
+<!-- 混淆的扩展后台脚本，原样加载，不做任何改写 -->
+<script src="../../vendor/extensions/dola_nowatermark/service-worker.js"></script>
+</body>
+</html>

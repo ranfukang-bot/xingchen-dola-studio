@@ -1,0 +1,19 @@
+{
+  "name": "xingchen-dola-studio-mac",
+  "productName": "星辰Dola创作台",
+  "version": "2.6.0",
+  "description": "星辰 Dola 创作台 macOS 版（Apple Silicon）——多账号隔离浏览器、Cookie 导入、15/30 秒视频生成、无水印下载",
+  "main": "src/main/index.js",
+  "author": "ranfukang-bot",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "scripts": {
+    "start": "electron .",
+    "dev": "DOLA_DEBUG=1 electron .",
+    "dist": "electron-builder --mac --arm64",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}
