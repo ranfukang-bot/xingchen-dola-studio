@@ -38,3 +38,14 @@ cd mac && npm install && npm start
 ```
 
 用法见 [`windows-batch/README.md`](windows-batch/README.md)。
+
+## 批量生成（Chrome 扩展，推荐）
+
+见 [`chrome-extension/`](chrome-extension/)。装进 Chrome 就能用，**Mac / Windows 通用,
+不用编译**。在 dola.com 页面里批量生成：自动 2.5 / 30 秒 / 9:16、自动传图、
+自动加提示词前缀、自动换账号、自动下载无水印成片。
+
+之所以是扩展而不是独立软件：自动化浏览器一启动就被识别成机器人、**每次都弹滑块**；
+而扩展跑在你真实的 Chrome 里，和创作台一样——有效 Cookie 直接已登录。
+
+装法和用法见 [`chrome-extension/README.md`](chrome-extension/README.md)。

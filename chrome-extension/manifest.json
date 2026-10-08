@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "星辰Dola 批量生成",
+  "version": "1.0.0",
+  "description": "在 dola.com 页面内批量生成视频：自动选 2.5 / 30 秒 / 9:16、自动传参考图、自动加提示词前缀、自动换账号、自动下载无水印成片。",
+
+  "permissions": [
+    "cookies",
+    "storage",
+    "downloads",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "*://*.dola.com/*",
+    "*://*.byteintlapi.com/*",
+    "*://*.doubao.com/*"
+  ],
+
+  "background": {
+    "service_worker": "src/background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.dola.com/*"],
+      "js": [
+        "vendor/dola-15s-dom-request-hook.js",
+        "vendor/dola-reference-materials.js",
+        "src/engine.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": ["*://*.dola.com/*"],
+      "js": ["src/panel.js"],
+      "css": ["src/panel.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "action": {
+    "default_title": "星辰Dola 批量生成"
+  }
+}

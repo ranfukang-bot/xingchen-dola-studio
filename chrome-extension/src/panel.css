@@ -1,0 +1,137 @@
+/* 面板样式。全部挂在 #xcb-root 下，避免和 Dola 自己的样式打架。 */
+
+#xcb-root {
+  position: fixed;
+  right: 0;
+  top: 90px;
+  z-index: 2147483600;
+  font: 13px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  color: #eaf0ff;
+}
+
+#xcb-root * { box-sizing: border-box; }
+
+#xcb-tab {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 34px;
+  padding: 10px 0;
+  text-align: center;
+  writing-mode: vertical-rl;
+  letter-spacing: 3px;
+  background: linear-gradient(145deg, #1a2a4a, #0b1022);
+  border: 1px solid rgba(125, 211, 252, .4);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  color: #9ee7ff;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+#xcb-tab:hover { border-color: #67e8f9; }
+
+#xcb-panel {
+  display: none;
+  position: absolute;
+  right: 38px;
+  top: 0;
+  width: 400px;
+  max-height: 78vh;
+  flex-direction: column;
+  background: rgba(8, 13, 28, .98);
+  border: 1px solid rgba(125, 211, 252, .32);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .6);
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+#xcb-panel.open { display: flex; }
+
+.xcb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, .16);
+  flex: 0 0 auto;
+}
+.xcb-head strong { font-size: 14px; }
+#xcb-close { cursor: pointer; font-size: 18px; color: #8da2c2; padding: 0 4px; }
+#xcb-close:hover { color: #fff; }
+
+.xcb-body { padding: 12px 14px 14px; overflow-y: auto; }
+
+.xcb-sec { margin-bottom: 12px; }
+.xcb-sec > label,
+.xcb-grid label {
+  display: block;
+  font-size: 11.5px;
+  color: #8da2c2;
+  margin-bottom: 4px;
+}
+.xcb-hint { font-size: 11px; color: #64748b; margin-top: 4px; line-height: 1.5; }
+
+#xcb-root input[type=text],
+#xcb-root textarea,
+#xcb-root input[type=file] {
+  width: 100%;
+  background: #080e1c;
+  border: 1px solid rgba(148, 163, 184, .22);
+  border-radius: 8px;
+  padding: 6px 9px;
+  color: #eaf0ff;
+  font: inherit;
+  outline: none;
+}
+#xcb-root textarea { resize: vertical; font-size: 12px; line-height: 1.5; }
+#xcb-root input:focus, #xcb-root textarea:focus { border-color: #67e8f9; }
+#xcb-root input[type=file] { padding: 5px; font-size: 11.5px; }
+
+.xcb-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; margin-bottom: 12px; }
+
+.xcb-stat {
+  font-size: 11.5px;
+  color: #9fb3d1;
+  background: rgba(23, 34, 58, .7);
+  border: 1px solid rgba(148, 163, 184, .14);
+  border-radius: 8px;
+  padding: 7px 9px;
+  margin-bottom: 10px;
+  line-height: 1.7;
+}
+.xcb-stat b { color: #a5f3fc; }
+
+.xcb-row { display: flex; gap: 7px; margin-bottom: 10px; }
+#xcb-root button {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, .25);
+  background: #16223c;
+  color: #eaf0ff;
+  font: inherit;
+  cursor: pointer;
+  transition: .12s;
+}
+#xcb-root button:hover { border-color: #67e8f9; background: #1b2b4c; }
+#xcb-root button.xcb-primary { background: #2563eb; border-color: transparent; }
+#xcb-root button.xcb-primary:hover { background: #3b74f0; }
+#xcb-root button.xcb-danger { color: #ff8fa0; }
+
+.xcb-log {
+  max-height: 190px;
+  overflow-y: auto;
+  background: #060a16;
+  border: 1px solid rgba(148, 163, 184, .14);
+  border-radius: 8px;
+  padding: 7px 8px;
+  font: 11.5px/1.65 ui-monospace, Menlo, Consolas, monospace;
+}
+.xcb-l { white-space: pre-wrap; word-break: break-all; }
+.xcb-l span { color: #475569; margin-right: 6px; }
+.xcb-info { color: #cbd5e1; }
+.xcb-ok   { color: #6ee7b7; }
+.xcb-warn { color: #fcd34d; }
+.xcb-err  { color: #fca5a5; }
+.xcb-dim  { color: #64748b; }
